@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.tunnel/
+certs/
+data/reports.db
+data/reports.db-*
+*.log
+
+# local-only files (not published)
+/minitunnel
+/PLAN.docx
+/PLANNING.docx

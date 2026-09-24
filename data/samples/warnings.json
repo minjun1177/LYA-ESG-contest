@@ -1,0 +1,5 @@
+{
+  "_comment": "SAMPLE DATA — used only when DATA_GO_KR_KEY is not set. Mimics the t6 field of the KMA getPwnStatus response.",
+  "issuedAt": "2026-07-15T06:00:00.000Z",
+  "t6": "o 호우경보 : 서울, 경기도(고양, 파주, 김포)\r\no 호우주의보 : 인천, 강원도(철원, 화천)\r\no 폭염주의보 : 대구, 경상북도(경산, 영천, 경주)\r\no 강풍주의보 : 제주도(제주도산지, 제주도북부), 울릉도.독도\r\no 풍랑주의보 : 동해중부먼바다, 제주도남쪽먼바다"
+}

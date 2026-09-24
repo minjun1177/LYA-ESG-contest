@@ -1,0 +1,9 @@
+{
+  "_comment": "SAMPLE DATA — used only when DATA_GO_KR_KEY is not set.",
+  "observedAt": "2026-07-15T06:00:00.000Z",
+  "temperature": 24.5,
+  "rain1h": 32,
+  "humidity": 95,
+  "windSpeed": 5.1,
+  "precipitationType": 1
+}

@@ -1,0 +1,299 @@
+{
+  "app": {
+    "title": "Climate Disaster Safety Map",
+    "subtitle": "Your local risk level and the safest shelters nearby"
+  },
+  "lang": { "label": "Language" },
+  "source": {
+    "sample": "Sample data (API key not set)",
+    "live": "KMA live data",
+    "unavailable": "Could not load KMA data",
+    "simulated": "Demo mode: simulated disaster"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Risk",
+    "map": "Safety map",
+    "actions": "What to do"
+  },
+  "home": {
+    "locationTitle": "My location",
+    "useGps": "Use current location",
+    "pickOnMap": "Pick on map",
+    "locating": "Getting your location…",
+    "locationUnknown": "Set your location to see nearby risks and shelters.",
+    "yourArea": "{province}",
+    "outsideKorea": "This location is outside South Korea",
+    "gpsDenied": "Location permission was denied. Pick your location on the map instead.",
+    "gpsInsecure": "Browsers block GPS on plain HTTP addresses. Pick your location on the map or open the HTTPS address.",
+    "gpsUnavailable": "Could not get your current location. Pick it on the map instead.",
+    "manualLocation": "Location picked on the map",
+    "gpsLocation": "GPS location (accuracy about {accuracy})",
+    "weatherTitle": "Current weather",
+    "goDashboard": "Check my risk level"
+  },
+  "weather": {
+    "temperature": "Temperature",
+    "rain1h": "Rain (1 h)",
+    "humidity": "Humidity",
+    "wind": "Wind",
+    "precip": "Precipitation",
+    "observedAt": "Observed {time}",
+    "unavailable": "Weather data is unavailable",
+    "precipType": {
+      "0": "None", "1": "Rain", "2": "Rain/snow", "3": "Snow", "5": "Drizzle", "6": "Drizzle/snow flurries", "7": "Snow flurries"
+    }
+  },
+  "dashboard": {
+    "title": "Risk at my location",
+    "reasonsTitle": "Why",
+    "sheltersTitle": "Shelters suited to the current situation",
+    "sheltersFiltered": "Shelters unsuitable for {hazard} are hidden",
+    "noShelters": "No shelters registered within 20 km. Add shelter data.",
+    "showOnMap": "Show on map",
+    "nearbyReports_one": "{count} citizen report within {radius}",
+    "nearbyReports_other": "{count} citizen reports within {radius}",
+    "simulateLabel": "Disaster simulation (demo)",
+    "simulateOff": "Off (real data)",
+    "needLocation": "Set your location on the Home tab first."
+  },
+  "risk": {
+    "level": {
+      "safe": "Safe",
+      "caution": "Caution",
+      "danger": "Danger"
+    },
+    "levelDesc": {
+      "safe": "No active weather alerts or hazard reports near you.",
+      "caution": "There are risk factors. Keep checking the weather.",
+      "danger": "Prepare to evacuate now. Check the nearest shelter."
+    },
+    "reason": {
+      "warning": "{hazard} {level} in effect",
+      "warningPartial": "{hazard} {level} in effect (parts of the province: {detail})",
+      "earthquake": "Magnitude {magnitude} earthquake {distance} away",
+      "reports": "{count} citizen hazard report(s) within {radius}",
+      "heavyRainNow": "Heavy rain right now: {mm} mm per hour",
+      "hot": "Temperature {c}°C — heat wave level",
+      "cold": "Temperature {c}°C — cold wave level",
+      "none": "No risk factors"
+    }
+  },
+  "level": {
+    "advisory": "advisory",
+    "warning": "warning"
+  },
+  "province": {
+    "seoul": "Seoul", "busan": "Busan", "daegu": "Daegu", "incheon": "Incheon",
+    "gwangju": "Gwangju", "daejeon": "Daejeon", "ulsan": "Ulsan", "sejong": "Sejong",
+    "gyeonggi": "Gyeonggi-do", "gangwon": "Gangwon-do", "chungbuk": "Chungcheongbuk-do", "chungnam": "Chungcheongnam-do",
+    "jeonbuk": "Jeonbuk-do", "jeonnam": "Jeollanam-do", "gyeongbuk": "Gyeongsangbuk-do", "gyeongnam": "Gyeongsangnam-do",
+    "jeju": "Jeju-do"
+  },
+  "shelter": {
+    "type": {
+      "temporary_housing": "Temporary housing",
+      "earthquake_indoor": "Earthquake-ready temporary housing",
+      "earthquake_outdoor": "Outdoor earthquake evacuation site",
+      "civil_defense": "Civil defense shelter",
+      "heat": "Cooling center",
+      "cold": "Warming center"
+    },
+    "capacity": "Holds {count}",
+    "underground": "Underground",
+    "sample": "Sample",
+    "distance": "{distance}"
+  },
+  "hazard": {
+    "heavy_rain": {
+      "name": "Heavy rain",
+      "guide": [
+        "Stay away from riverbanks, valleys, underpasses and underground parking.",
+        "If you are in a basement or semi-basement home, move above ground before water comes in.",
+        "Never walk or drive through flooded roads, even if the current looks weak.",
+        "Residents of landslide-prone areas should evacuate early.",
+        "Switch off the main breaker and close the gas valve."
+      ]
+    },
+    "typhoon": {
+      "name": "Typhoon",
+      "guide": [
+        "Stay indoors and keep away from windows.",
+        "Avoid signboards, construction sites and anything that can be blown away.",
+        "Residents of coasts, riverbanks and low-lying areas should evacuate early.",
+        "Prepare a flashlight and a power bank in case of a blackout."
+      ]
+    },
+    "storm_surge": {
+      "name": "Storm surge",
+      "guide": [
+        "Leave the coast and low-lying areas for higher ground.",
+        "Do not go near breakwaters or coastal roads.",
+        "Follow evacuation announcements promptly."
+      ]
+    },
+    "tsunami": {
+      "name": "Tsunami",
+      "guide": [
+        "Move away from the coast to high ground immediately.",
+        "Larger waves may follow the first one; do not return until the alert is lifted.",
+        "Do not evacuate toward rivers or streams."
+      ]
+    },
+    "strong_wind": {
+      "name": "Strong wind",
+      "guide": [
+        "Stay away from signboards, street trees and construction fences.",
+        "Close the windows and keep away from them.",
+        "Bring items on balconies and rooftops indoors."
+      ]
+    },
+    "heavy_snow": {
+      "name": "Heavy snow",
+      "guide": [
+        "Avoid going out; use public transport if you must.",
+        "Clear snow safely from greenhouses and weak roofs.",
+        "On icy roads, take short steps and keep your hands out of your pockets."
+      ]
+    },
+    "cold_wave": {
+      "name": "Cold wave",
+      "guide": [
+        "Keep warm with a hat, scarf and gloves when going out.",
+        "Older people and children should limit outdoor activity and use a nearby warming center.",
+        "Insulate water meters and pipes so they do not freeze."
+      ]
+    },
+    "heat_wave": {
+      "name": "Heat wave",
+      "guide": [
+        "Avoid outdoor activity between noon and 5 p.m.",
+        "Drink water often, even when you are not thirsty.",
+        "If you feel dizzy or have a headache, move somewhere cool and call 119.",
+        "Use a nearby cooling center."
+      ]
+    },
+    "earthquake": {
+      "name": "Earthquake",
+      "guide": [
+        "While shaking, get under a sturdy table and protect your head.",
+        "When the shaking stops, shut off gas and power and open the door to secure an exit.",
+        "Use the stairs, not the elevator.",
+        "Outside, move to an open area away from buildings and poles (outdoor evacuation site)."
+      ]
+    },
+    "dry": {
+      "name": "Dry weather",
+      "guide": [
+        "Do not light fires or burn rubbish in mountains or fields.",
+        "Do not throw away cigarette butts carelessly.",
+        "Call 119 as soon as you spot a fire."
+      ]
+    },
+    "yellow_dust": {
+      "name": "Yellow dust",
+      "guide": [
+        "Avoid going out; wear a KF80 or better mask if you must.",
+        "Keep windows closed and wash your hands and face when you get home.",
+        "Drink plenty of water."
+      ]
+    },
+    "high_seas": {
+      "name": "High seas",
+      "guide": [
+        "Stay away from rocky shores and breakwaters.",
+        "Vessels should move to a safe harbor."
+      ]
+    }
+  },
+  "map": {
+    "layerProvinces": "Provincial alerts",
+    "layerShelters": "Shelters",
+    "layerReports": "Citizen reports",
+    "layerEarthquakes": "Earthquakes",
+    "legendWarning": "Warning",
+    "legendAdvisory": "Advisory",
+    "legendNone": "No alert",
+    "reportButton": "Report a hazard",
+    "pickReportHint": "Tap the map where the hazard is",
+    "pickLocationHint": "Tap the map at your location",
+    "cancel": "Cancel",
+    "you": "You are here",
+    "nationwide": "Whole country",
+    "myLocation": "My location",
+    "recommended": "Recommended shelter",
+    "provinceNone": "No active alerts"
+  },
+  "report": {
+    "title": "Report a hazard",
+    "categoryLabel": "Type",
+    "category": {
+      "flooding": "Flooding",
+      "road_damage": "Damaged road",
+      "fallen_tree": "Fallen tree",
+      "landslide": "Landslide / debris",
+      "fire": "Fire",
+      "power_line": "Downed power line",
+      "other": "Other"
+    },
+    "descriptionLabel": "Description (optional, up to {max} characters)",
+    "descriptionPlaceholder": "e.g. Knee-deep water at the alley entrance",
+    "submit": "Submit report",
+    "cancel": "Cancel",
+    "success": "Your report is now visible to other users.",
+    "resolve": "It's resolved",
+    "resolveVotes": "Resolved votes {votes}/{threshold}",
+    "resolveDone": "Thanks for confirming.",
+    "expiresNote": "Reports disappear automatically after {hours} hours.",
+    "newToast": "New hazard report: {category}"
+  },
+  "quake": {
+    "title": "Magnitude {magnitude} earthquake",
+    "depth": "Depth {depth} km",
+    "intensity": "Max intensity {intensity}"
+  },
+  "actions": {
+    "title": "What to do",
+    "current": "What to do right now",
+    "all": "Guides for every disaster",
+    "noCurrent": "No disaster is active at your location. Browse the guides below.",
+    "sosTitle": "Share SOS status",
+    "sosDesc": "Send your location and a call for help to family or friends.",
+    "sosButton": "Share SOS",
+    "sosText": "[SOS] I need help. Situation: {status}. My location: {url}",
+    "sosCopied": "SOS message copied. Paste it into a messenger to send.",
+    "sosFailed": "Could not share. Copy the message below manually.",
+    "call119": "119 Fire & rescue",
+    "call112": "112 Police",
+    "noLocation": "Set your location first so the SOS includes it."
+  },
+  "emergency": {
+    "title": "Evacuation advised",
+    "nearest": "Nearest shelter: {name} ({distance})",
+    "noShelter": "No nearby shelter data. Move to high ground or a sturdy building.",
+    "goShelter": "Show shelter",
+    "guide": "What to do",
+    "close": "Close"
+  },
+  "error": {
+    "invalid_location": "The location is invalid.",
+    "out_of_korea": "Only locations in South Korea can be reported.",
+    "invalid_category": "Choose a report type.",
+    "description_too_long": "The description must be {max} characters or fewer.",
+    "rate_limited": "Too many reports. Try again in {retryAfterSec} seconds.",
+    "not_found": "Not found.",
+    "invalid_bbox": "The map area is invalid.",
+    "invalid_simulation": "This simulation is not supported.",
+    "invalid_body": "The request is malformed.",
+    "internal": "Server error. Please try again shortly.",
+    "network": "Cannot reach the server. Check your network."
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{n} min ago",
+    "hoursAgo": "{n} h ago"
+  },
+  "footer": {
+    "data": "Data: KMA & Ministry of the Interior and Safety (data.go.kr) · Map © OpenStreetMap contributors"
+  }
+}

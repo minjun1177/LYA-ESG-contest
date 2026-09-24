@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title></title>
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1 data-i18n="app.title"></h1>
+      <p class="subtitle" data-i18n="app.subtitle"></p>
+    </div>
+    <label class="lang">
+      <span class="visually-hidden" data-i18n="lang.label"></span>
+      <select id="lang-select" data-i18n-aria-label="lang.label"></select>
+    </label>
+  </header>
+
+  <div id="source-banner" class="banner" hidden></div>
+
+  <main>
+    <!-- 화면 1: 메인 — 위치 권한 요청 + 현재 날씨 -->
+    <section id="view-home" class="view" data-view="home">
+      <article class="card">
+        <h2 data-i18n="home.locationTitle"></h2>
+        <p id="location-status" class="muted" data-i18n="home.locationUnknown"></p>
+        <div class="row">
+          <button id="btn-gps" class="btn primary" type="button" data-i18n="home.useGps"></button>
+          <button id="btn-pick" class="btn" type="button" data-i18n="home.pickOnMap"></button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2 data-i18n="home.weatherTitle"></h2>
+        <div id="weather"></div>
+      </article>
+
+      <article id="home-risk" class="card risk-mini" hidden>
+        <div class="risk-mini-body">
+          <span id="home-risk-dot" class="dot"></span>
+          <strong id="home-risk-label"></strong>
+        </div>
+        <button id="btn-go-dashboard" class="btn" type="button" data-i18n="home.goDashboard"></button>
+      </article>
+    </section>
+
+    <!-- 화면 2: 대시보드 — 위험도 신호등 + 맞춤 대피소 -->
+    <section id="view-dashboard" class="view" data-view="dashboard" hidden>
+      <p id="dashboard-empty" class="card muted" data-i18n="dashboard.needLocation"></p>
+      <div id="dashboard-content" hidden>
+        <article class="card">
+          <h2 data-i18n="dashboard.title"></h2>
+          <div class="signal" role="img" id="signal">
+            <span class="lamp danger"></span>
+            <span class="lamp caution"></span>
+            <span class="lamp safe"></span>
+          </div>
+          <p id="risk-level" class="risk-level"></p>
+          <p id="risk-desc" class="muted"></p>
+          <h3 data-i18n="dashboard.reasonsTitle"></h3>
+          <ul id="risk-reasons" class="reasons"></ul>
+          <p id="nearby-reports" class="muted"></p>
+        </article>
+
+        <article class="card">
+          <h2 data-i18n="dashboard.sheltersTitle"></h2>
+          <p id="shelters-note" class="muted"></p>
+          <ol id="shelter-list" class="shelters"></ol>
+        </article>
+
+        <article class="card">
+          <label class="field">
+            <span data-i18n="dashboard.simulateLabel"></span>
+            <select id="simulate-select"></select>
+          </label>
+        </article>
+      </div>
+    </section>
+
+    <!-- 화면 3: 안전 지도 — 전국 특보 + 대피소 + 시민 제보 -->
+    <section id="view-map" class="view view-map" data-view="map" hidden>
+      <div id="map"></div>
+      <div id="map-hint" class="map-hint" hidden>
+        <span id="map-hint-text"></span>
+        <button id="btn-hint-cancel" class="btn small" type="button" data-i18n="map.cancel"></button>
+      </div>
+      <div class="map-tools">
+        <button id="btn-nationwide" class="btn small" type="button" data-i18n="map.nationwide"></button>
+        <button id="btn-mylocation" class="btn small" type="button" data-i18n="map.myLocation"></button>
+      </div>
+      <div id="map-legend" class="legend"></div>
+      <button id="btn-report" class="fab" type="button" data-i18n="map.reportButton"></button>
+    </section>
+
+    <!-- 화면 4: 행동요령 + SOS 공유 -->
+    <section id="view-actions" class="view" data-view="actions" hidden>
+      <article class="card">
+        <h2 data-i18n="actions.current"></h2>
+        <div id="current-guides"></div>
+      </article>
+
+      <article class="card">
+        <h2 data-i18n="actions.sosTitle"></h2>
+        <p class="muted" data-i18n="actions.sosDesc"></p>
+        <div class="row">
+          <button id="btn-sos" class="btn danger" type="button" data-i18n="actions.sosButton"></button>
+          <a class="btn" href="tel:119" data-i18n="actions.call119"></a>
+          <a class="btn" href="tel:112" data-i18n="actions.call112"></a>
+        </div>
+        <p id="sos-status" class="muted"></p>
+        <textarea id="sos-text" class="sos-text" rows="3" readonly hidden></textarea>
+      </article>
+
+      <article class="card">
+        <h2 data-i18n="actions.all"></h2>
+        <div id="all-guides" class="guides"></div>
+      </article>
+    </section>
+  </main>
+
+  <p class="footer" data-i18n="footer.data"></p>
+
+  <nav class="tabbar">
+    <button type="button" data-tab="home"><span class="ico" aria-hidden="true">⌂</span><span data-i18n="nav.home"></span></button>
+    <button type="button" data-tab="dashboard"><span class="ico" aria-hidden="true">●</span><span data-i18n="nav.dashboard"></span></button>
+    <button type="button" data-tab="map"><span class="ico" aria-hidden="true">◎</span><span data-i18n="nav.map"></span></button>
+    <button type="button" data-tab="actions"><span class="ico" aria-hidden="true">✚</span><span data-i18n="nav.actions"></span></button>
+  </nav>
+
+  <!-- 긴급 대피 권고 팝업 -->
+  <dialog id="emergency" class="dialog emergency">
+    <h2 data-i18n="emergency.title"></h2>
+    <p id="emergency-reason"></p>
+    <p id="emergency-shelter"></p>
+    <div class="row">
+      <button id="btn-emg-shelter" class="btn primary" type="button" data-i18n="emergency.goShelter"></button>
+      <button id="btn-emg-guide" class="btn" type="button" data-i18n="emergency.guide"></button>
+      <button id="btn-emg-close" class="btn" type="button" data-i18n="emergency.close"></button>
+    </div>
+  </dialog>
+
+  <!-- 위험 요소 제보 입력 -->
+  <dialog id="report-dialog" class="dialog">
+    <form id="report-form" method="dialog">
+      <h2 data-i18n="report.title"></h2>
+      <label class="field">
+        <span data-i18n="report.categoryLabel"></span>
+        <select id="report-category" required></select>
+      </label>
+      <label class="field">
+        <span id="report-desc-label"></span>
+        <textarea id="report-description" rows="3" data-i18n-placeholder="report.descriptionPlaceholder"></textarea>
+      </label>
+      <p id="report-expires" class="muted small"></p>
+      <p id="report-error" class="error" hidden></p>
+      <div class="row">
+        <button id="btn-report-submit" class="btn primary" type="submit" data-i18n="report.submit"></button>
+        <button id="btn-report-cancel" class="btn" type="button" data-i18n="report.cancel"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "climate-safety-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "기후 재난 대비 안전 대시보드 — OSM 지도 위 재난 특보, 맞춤 대피소 안내, 시민 위험 제보",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "lint": "eslint .",
+    "import:shelters": "node scripts/import-shelters.js",
+    "tunnel": "bash scripts/tunnel.sh"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0"
+  }
+}

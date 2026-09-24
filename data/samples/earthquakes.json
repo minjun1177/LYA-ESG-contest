@@ -1,0 +1,7 @@
+{
+  "_comment": "SAMPLE DATA — used only when DATA_GO_KR_KEY is not set.",
+  "earthquakes": [
+    { "time": "2026-07-14T21:12:00.000Z", "lat": 35.77, "lng": 129.19, "magnitude": 3.1, "depthKm": 12, "intensity": "III", "location": "" },
+    { "time": "2026-07-13T03:40:00.000Z", "lat": 36.12, "lng": 127.12, "magnitude": 2.4, "depthKm": 8, "intensity": "I", "location": "" }
+  ]
+}
