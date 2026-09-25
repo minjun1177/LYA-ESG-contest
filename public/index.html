@@ -84,6 +84,12 @@
     <!-- 화면 3: 안전 지도 — 전국 특보 + 대피소 + 시민 제보 -->
     <section id="view-map" class="view view-map" data-view="map" hidden>
       <div id="map"></div>
+      <form id="map-search" class="map-search" role="search">
+        <input id="search-input" type="search" maxlength="100" autocomplete="off" enterkeyhint="search"
+               data-i18n-placeholder="search.placeholder" data-i18n-aria-label="search.placeholder">
+        <button id="btn-search" class="btn small primary" type="submit" data-i18n="search.button"></button>
+      </form>
+      <div id="search-results" class="search-results" hidden></div>
       <div id="map-hint" class="map-hint" hidden>
         <span id="map-hint-text"></span>
         <button id="btn-hint-cancel" class="btn small" type="button" data-i18n="map.cancel"></button>
@@ -120,9 +126,9 @@
         <div id="all-guides" class="guides"></div>
       </article>
     </section>
-  </main>
 
-  <p class="footer" data-i18n="footer.data"></p>
+    <p class="footer" data-i18n="footer.data"></p>
+  </main>
 
   <nav class="tabbar">
     <button type="button" data-tab="home"><span class="ico" aria-hidden="true">⌂</span><span data-i18n="nav.home"></span></button>

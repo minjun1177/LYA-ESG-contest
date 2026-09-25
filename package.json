@@ -14,6 +14,7 @@
     "test": "node --disable-warning=ExperimentalWarning --test",
     "lint": "eslint .",
     "import:shelters": "node scripts/import-shelters.js",
+    "fetch:shelters": "node scripts/fetch-shelters.js",
     "tunnel": "bash scripts/tunnel.sh"
   },
   "dependencies": {

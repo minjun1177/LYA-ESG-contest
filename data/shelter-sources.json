@@ -1,0 +1,10 @@
+{
+  "_comment": "Real shelter datasets on data.go.kr (file data, no login or key needed, license: 이용허락범위 제한 없음). Used by `npm run fetch:shelters`. Only datasets that include WGS84 coordinates are listed.",
+  "datasets": [
+    { "id": "15116079", "type": "heat", "out": "real-seoul-geumcheon-heat.csv", "title": "서울특별시 금천구_무더위쉼터현황" },
+    { "id": "15148999", "type": "heat", "out": "real-seoul-junggu-heat.csv", "title": "서울특별시 중구_무더위쉼터 현황" },
+    { "id": "15149002", "type": "cold", "out": "real-seoul-junggu-cold.csv", "title": "서울특별시 중구_한파쉼터 현황" },
+    { "id": "15036334", "type": "temporary_housing", "out": "real-seoul-gwangjin-housing.csv", "title": "서울특별시 광진구_이재민임시주거시설" },
+    { "id": "15104075", "type": "heat", "out": "real-daejeon-seogu-heat.csv", "title": "대전광역시 서구_무더위쉼터" }
+  ]
+}

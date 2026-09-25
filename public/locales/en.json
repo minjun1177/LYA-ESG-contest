@@ -27,6 +27,7 @@
     "gpsDenied": "Location permission was denied. Pick your location on the map instead.",
     "gpsInsecure": "Browsers block GPS on plain HTTP addresses. Pick your location on the map or open the HTTPS address.",
     "gpsUnavailable": "Could not get your current location. Pick it on the map instead.",
+    "locationSet": "Location set. Recalculating your risk and shelters.",
     "manualLocation": "Location picked on the map",
     "gpsLocation": "GPS location (accuracy about {accuracy})",
     "weatherTitle": "Current weather",
@@ -48,6 +49,7 @@
     "title": "Risk at my location",
     "reasonsTitle": "Why",
     "sheltersTitle": "Shelters suited to the current situation",
+    "sheltersFallback": "No {hazard} shelter data for this area — showing the nearest above-ground shelters instead. Follow the safety guide first.",
     "sheltersFiltered": "Shelters unsuitable for {hazard} are hidden",
     "noShelters": "No shelters registered within 20 km. Add shelter data.",
     "showOnMap": "Show on map",
@@ -270,6 +272,7 @@
   "emergency": {
     "title": "Evacuation advised",
     "nearest": "Nearest shelter: {name} ({distance})",
+    "nearestFallback": "No {hazard} shelter data here. Nearest above-ground shelter: {name} ({distance})",
     "noShelter": "No nearby shelter data. Move to high ground or a sturdy building.",
     "goShelter": "Show shelter",
     "guide": "What to do",
@@ -286,7 +289,20 @@
     "invalid_simulation": "This simulation is not supported.",
     "invalid_body": "The request is malformed.",
     "internal": "Server error. Please try again shortly.",
-    "network": "Cannot reach the server. Check your network."
+    "network": "Cannot reach the server. Check your network.",
+    "invalid_query": "Enter a search term of 1–{max} characters.",
+    "search_unavailable": "Cannot reach the place search server. Showing shelter results only.",
+    "search_busy": "Too many searches right now. Please try again shortly."
+  },
+  "search": {
+    "placeholder": "Search places (e.g. Seoul City Hall, Guro Station)",
+    "button": "Search",
+    "searching": "Searching…",
+    "places": "Places",
+    "shelters": "Shelters",
+    "noResults": "No results for '{query}'",
+    "setMyLocation": "Set as my location",
+    "close": "Close search results"
   },
   "time": {
     "justNow": "just now",

@@ -12,3 +12,10 @@ data/reports.db-*
 /minitunnel
 /PLAN.docx
 /PLANNING.docx
+
+# real shelter data is downloaded with `npm run fetch:shelters`
+/data/shelters/real-*.csv
+
+# E2E test output
+/test-results/
+/test-results.tar

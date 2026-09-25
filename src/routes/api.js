@@ -5,7 +5,8 @@ import { findProvince, loadProvinces } from '../lib/provinces.js';
 import { RateLimiter } from '../lib/rateLimit.js';
 import { REPORT_CATEGORIES, REPORT_DESCRIPTION_MAX } from '../lib/reportStore.js';
 import { assessRisk, RISK_RULES } from '../lib/risk.js';
-import { matchShelters, sheltersInBounds } from '../lib/shelters.js';
+import { matchShelters, searchShelters, sheltersInBounds } from '../lib/shelters.js';
+import { GeocoderError } from '../services/geocoder.js';
 import { warningsByProvince } from '../lib/warnings.js';
 
 // 오류는 언어 중립 코드로만 응답하고, 화면에서 error.<code> 로 번역한다
@@ -39,11 +40,14 @@ function simulatedHazard(value) {
   return value;
 }
 
-export function createApiRouter({ config, kma, shelters, reportStore, events }) {
+export const SEARCH_QUERY_MAX = 100;
+
+export function createApiRouter({ config, kma, geocoder, shelters, reportStore, events }) {
   const router = express.Router();
   // 파싱 오류도 아래 오류 처리기에서 코드로 응답하도록 라우터 안에서 등록
   router.use(express.json({ limit: '16kb' }));
   const limiter = new RateLimiter({ limit: config.reportRateLimit, windowMs: config.reportRateWindowMin * 60 * 1000 });
+  const searchLimiter = new RateLimiter({ limit: config.searchRateLimit, windowMs: 60 * 1000 });
 
   // minitunnel -H 터널은 실제 방문자 IP를 mt-connection-ip 헤더로 넘겨준다 (외부에서 위조 불가)
   const clientIp = (req) =>
@@ -113,6 +117,7 @@ export function createApiRouter({ config, kma, shelters, reportStore, events }) 
       weather: weather?.source === 'unavailable' ? null : weather,
     });
 
+    const matched = matchShelters(shelters, location, risk.hazards);
     res.json({
       location,
       province,
@@ -121,7 +126,8 @@ export function createApiRouter({ config, kma, shelters, reportStore, events }) 
       warnings,
       weather,
       risk,
-      shelters: matchShelters(shelters, location, risk.hazards),
+      shelters: matched.shelters,
+      shelterFallback: matched.fallback,
       nearbyReports: reports
         .map((r) => ({ ...r, distanceM: Math.round(distanceMeters(location.lat, location.lng, r.lat, r.lng)) }))
         .filter((r) => r.distanceM <= RISK_RULES.reportRadiusM)
@@ -135,6 +141,30 @@ export function createApiRouter({ config, kma, shelters, reportStore, events }) 
       ? String(req.query.types).split(',').filter((t) => SHELTER_TYPES.includes(t))
       : null;
     res.json({ shelters: sheltersInBounds(shelters, bbox, types) });
+  });
+
+  // 장소 검색: OSM(Nominatim) 장소 + 이름이 일치하는 대피소
+  router.get('/search', async (req, res) => {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (!q || q.length > SEARCH_QUERY_MAX) throw new ApiError(400, 'invalid_query', { max: SEARCH_QUERY_MAX });
+    const lang = /^[a-z]{2}$/.test(String(req.query.lang)) ? String(req.query.lang) : 'ko';
+
+    const ip = clientIp(req);
+    if (!searchLimiter.take(ip)) {
+      const retryAfter = searchLimiter.retryAfterSec(ip);
+      res.set('Retry-After', String(retryAfter));
+      throw new ApiError(429, 'rate_limited', { retryAfterSec: retryAfter });
+    }
+
+    let places = [];
+    let placesError = null;
+    try {
+      places = await geocoder.search(q, lang);
+    } catch (err) {
+      if (!(err instanceof GeocoderError)) throw err;
+      placesError = err.code; // 장소 검색이 안 돼도 대피소 결과는 돌려준다
+    }
+    res.json({ query: q, places, placesError, shelters: searchShelters(shelters, q) });
   });
 
   router.get('/reports', (req, res) => {

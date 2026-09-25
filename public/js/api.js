@@ -39,6 +39,7 @@ export const api = {
   overview: () => request('/api/overview'),
   situation: ({ lat, lng, simulate }) => request(`/api/situation?${qs({ lat, lng, simulate })}`),
   shelters: (bbox) => request(`/api/shelters?${qs({ bbox: bbox.join(',') })}`),
+  search: ({ q, lang }) => request(`/api/search?${qs({ q, lang })}`),
   reports: () => request('/api/reports'),
   createReport: (report) => request('/api/reports', { method: 'POST', body: JSON.stringify(report) }),
   resolveReport: (id) => request(`/api/reports/${encodeURIComponent(id)}/resolve`, { method: 'POST' }),

@@ -25,6 +25,7 @@ const state = {
   tab: 'home',
   dismissedEmergency: null,
   pendingReport: null,
+  search: null, // { query, loading, data, error }
   watchId: null,
 };
 
@@ -67,7 +68,15 @@ function hazardText(w) {
 }
 
 // ---------------------------------------------------------------- 탭
+// PC(넓은 화면)에서는 지도가 오른쪽에 항상 보이고, 왼쪽 패널만 탭으로 바뀐다
+const desktopMq = window.matchMedia('(min-width: 1024px)');
+
 function showTab(tab) {
+  if (desktopMq.matches && tab === 'map') {
+    requestAnimationFrame(() => mapView.invalidate());
+    if (state.tab !== 'map') return;
+    tab = 'home';
+  }
   state.tab = tab;
   document.querySelectorAll('.view').forEach((v) => { v.hidden = v.dataset.view !== tab; });
   document.querySelectorAll('.tabbar button').forEach((b) => {
@@ -198,9 +207,10 @@ function renderDashboard() {
     ? t('dashboard.nearbyReports', { count: s.nearbyReports.length, radius: formatDistance(state.config.riskRules.reportRadiusM) })
     : '';
 
-  $('shelters-note').textContent = hazards.length > 0
-    ? t('dashboard.sheltersFiltered', { hazard: t(`hazard.${hazards[0]}.name`) })
-    : '';
+  let note = '';
+  if (s.shelterFallback) note = t('dashboard.sheltersFallback', { hazard: t(`hazard.${hazards[0]}.name`) });
+  else if (hazards.length > 0) note = t('dashboard.sheltersFiltered', { hazard: t(`hazard.${hazards[0]}.name`) });
+  $('shelters-note').textContent = note;
 
   const list = $('shelter-list');
   if (s.shelters.length === 0) {
@@ -280,8 +290,9 @@ function renderEmergencyText() {
   const reason = s.risk.reasons.find((r) => r.code === 'warning' || r.code === 'earthquake');
   $('emergency-reason').textContent = reason ? reasonText(reason) : t('risk.levelDesc.danger');
   const nearest = s.shelters[0];
+  const nearestKey = s.shelterFallback ? 'emergency.nearestFallback' : 'emergency.nearest';
   $('emergency-shelter').textContent = nearest
-    ? t('emergency.nearest', { name: nearest.name, distance: formatDistance(nearest.distanceM) })
+    ? t(nearestKey, { name: nearest.name, distance: formatDistance(nearest.distanceM), hazard: t(`hazard.${s.risk.hazards[0]}.name`) })
     : t('emergency.noShelter');
   $('btn-emg-shelter').hidden = !nearest;
 }
@@ -382,6 +393,9 @@ function startGps() {
       if (moved) {
         storage('remove', LOCATION_KEY);
         setLocation(next);
+      } else {
+        state.location.accuracy = next.accuracy;
+        renderLocation();
       }
     },
     (err) => {
@@ -488,6 +502,88 @@ async function shareSos() {
   }
 }
 
+// ---------------------------------------------------------------- 장소 검색
+function setManualLocation(latlng) {
+  if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId);
+  state.watchId = null;
+  setLocation({ ...latlng, manual: true });
+  mapView.focus(latlng.lat, latlng.lng, 15);
+  toast(t('home.locationSet'));
+}
+
+function resultButton(name, sub, onClick) {
+  const btn = el('button');
+  btn.type = 'button';
+  btn.append(el('div', 'r-name', name), el('div', 'r-sub', sub));
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function closeSearchResults() {
+  $('search-results').hidden = true;
+}
+
+function renderSearchResults() {
+  const box = $('search-results');
+  const s = state.search;
+  box.replaceChildren();
+  if (!s) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  if (s.loading) {
+    box.append(el('div', 'r-msg', t('search.searching')));
+    return;
+  }
+  if (s.error) {
+    box.append(el('div', 'r-msg', errorMessage(s.error)));
+    return;
+  }
+  const { shelters, places, placesError } = s.data;
+  if (shelters.length > 0) {
+    box.append(el('h4', null, t('search.shelters')));
+    shelters.forEach((sh) => box.append(resultButton(sh.name, t(`shelter.type.${sh.type}`), () => {
+      closeSearchResults();
+      mapView.showSearchResult({ lat: sh.lat, lng: sh.lng, name: sh.name, shelter: sh });
+    })));
+  }
+  if (places.length > 0) {
+    box.append(el('h4', null, t('search.places')));
+    places.forEach((p) => box.append(resultButton(p.name, p.address, () => {
+      closeSearchResults();
+      mapView.showSearchResult({ lat: p.lat, lng: p.lng, name: p.name, sub: p.address, bbox: p.bbox });
+    })));
+  }
+  if (placesError) box.append(el('div', 'r-msg', t(`error.${placesError}`)));
+  if (shelters.length === 0 && places.length === 0 && !placesError) {
+    box.append(el('div', 'r-msg', t('search.noResults', { query: s.query })));
+  }
+}
+
+let searchSeq = 0;
+async function runSearch(event) {
+  event.preventDefault();
+  const query = $('search-input').value.trim();
+  if (!query) return;
+  const seq = ++searchSeq;
+  const btn = $('btn-search');
+  btn.disabled = true;
+  state.search = { query, loading: true };
+  renderSearchResults();
+  try {
+    const data = await api.search({ q: query, lang: getLanguage() });
+    if (seq === searchSeq) state.search = { query, data };
+  } catch (err) {
+    if (seq === searchSeq) state.search = { query, error: err };
+  } finally {
+    if (seq === searchSeq) {
+      btn.disabled = false;
+      renderSearchResults();
+    }
+  }
+}
+
 // ---------------------------------------------------------------- 시작
 function bindEvents() {
   document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -526,11 +622,33 @@ function bindEvents() {
     showTab('actions');
   });
   $('btn-sos').addEventListener('click', shareSos);
+  // 입력 중 자동검색은 하지 않는다 (OSM Nominatim 이용 정책) — 검색 버튼/엔터로만
+  $('map-search').addEventListener('submit', runSearch);
+  $('search-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSearchResults();
+  });
+  $('search-input').addEventListener('focus', () => {
+    if (state.search) $('search-results').hidden = false;
+  });
+  $('search-input').addEventListener('search', (e) => {
+    // 입력창의 지우기(x) 버튼
+    if (!e.target.value) {
+      state.search = null;
+      renderSearchResults();
+      mapView.clearSearchResult();
+    }
+  });
+
+  desktopMq.addEventListener('change', () => {
+    if (desktopMq.matches && state.tab === 'map') showTab('home');
+    requestAnimationFrame(() => mapView.invalidate());
+  });
 
   onLanguageChange(() => {
     renderLanguageSelect();
     renderAll();
     mapView.relocalize();
+    if (state.search && !$('search-results').hidden) renderSearchResults();
   });
 }
 
@@ -551,13 +669,9 @@ async function main() {
     onResolveReport: resolveReport,
     onPick: (mode, latlng) => {
       if (mode === 'report') openReportDialog(latlng);
-      else {
-        if (state.watchId !== null) navigator.geolocation.clearWatch(state.watchId);
-        state.watchId = null;
-        setLocation({ ...latlng, manual: true });
-        mapView.focus(latlng.lat, latlng.lng, 14);
-      }
+      else setManualLocation(latlng);
     },
+    onSetLocation: setManualLocation,
   });
 
   bindEvents();

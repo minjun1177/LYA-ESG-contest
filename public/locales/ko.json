@@ -27,6 +27,7 @@
     "gpsDenied": "위치 권한이 거부되었습니다. 지도에서 직접 위치를 선택하세요.",
     "gpsInsecure": "이 주소(HTTP)에서는 브라우저가 GPS를 막습니다. 지도에서 위치를 선택하거나 HTTPS 주소로 접속하세요.",
     "gpsUnavailable": "현재 위치를 가져올 수 없습니다. 지도에서 위치를 선택하세요.",
+    "locationSet": "위치를 설정했습니다. 위험도와 대피소를 다시 계산합니다.",
     "manualLocation": "직접 선택한 위치",
     "gpsLocation": "GPS 위치 (정확도 약 {accuracy})",
     "weatherTitle": "현재 날씨",
@@ -48,6 +49,7 @@
     "title": "내 위치 위험도",
     "reasonsTitle": "판단 근거",
     "sheltersTitle": "지금 상황에 맞는 대피소",
+    "sheltersFallback": "이 지역에는 {hazard}에 맞는 대피소 데이터가 없어 가까운 지상 대피소를 대신 보여줍니다. 행동요령을 먼저 따르세요.",
     "sheltersFiltered": "{hazard} 상황에 맞지 않는 대피소는 숨겼습니다",
     "noShelters": "20km 안에 등록된 대피소가 없습니다. 대피소 데이터를 추가하세요.",
     "showOnMap": "지도에서 보기",
@@ -270,6 +272,7 @@
   "emergency": {
     "title": "긴급 대피 권고",
     "nearest": "가장 가까운 대피소: {name} ({distance})",
+    "nearestFallback": "{hazard}에 맞는 대피소 정보가 없습니다. 가까운 지상 대피소: {name} ({distance})",
     "noShelter": "가까운 대피소 정보가 없습니다. 높은 곳, 튼튼한 건물로 이동하세요.",
     "goShelter": "대피소 보기",
     "guide": "행동요령 보기",
@@ -286,7 +289,20 @@
     "invalid_simulation": "지원하지 않는 시뮬레이션입니다.",
     "invalid_body": "요청 형식이 올바르지 않습니다.",
     "internal": "서버 오류가 발생했습니다. 잠시 후 다시 시도하세요.",
-    "network": "서버에 연결할 수 없습니다. 네트워크를 확인하세요."
+    "network": "서버에 연결할 수 없습니다. 네트워크를 확인하세요.",
+    "invalid_query": "검색어를 1~{max}자로 입력하세요.",
+    "search_unavailable": "장소 검색 서버에 연결할 수 없습니다. 대피소 결과만 표시합니다.",
+    "search_busy": "검색 요청이 많습니다. 잠시 후 다시 시도하세요."
+  },
+  "search": {
+    "placeholder": "장소 검색 (예: 서울시청, 구로역)",
+    "button": "검색",
+    "searching": "검색 중…",
+    "places": "장소",
+    "shelters": "대피소",
+    "noResults": "'{query}' 검색 결과가 없습니다",
+    "setMyLocation": "내 위치로 설정",
+    "close": "검색 결과 닫기"
   },
   "time": {
     "justNow": "방금 전",

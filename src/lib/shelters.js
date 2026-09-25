@@ -52,11 +52,18 @@ export function loadShelters(dir) {
       console.warn(`[shelters] failed to read ${file}: ${err.message}`);
     }
   }
+  // 실제 데이터가 있으면 샘플(가상) 대피소는 섞지 않는다
+  const real = shelters.filter((s) => !s.sample);
+  if (real.length > 0 && real.length < shelters.length) {
+    console.log(`[shelters] real data found: ignoring ${shelters.length - real.length} sample shelters`);
+    return real;
+  }
   return shelters;
 }
 
 /**
  * 현재 재난에 맞는 대피소만 골라 가까운 순으로 반환
+ * @returns {{ shelters: Array, fallback: boolean }} fallback = 재난에 맞는 대피소가 없어 다른 종류로 대체함
  * @param {Array} shelters 전체 대피소
  * @param {{lat:number,lng:number}} origin 사용자 위치
  * @param {string[]} hazardCodes 현재 사용자 위치에 발효 중인 재난 코드 (중요한 순)
@@ -66,10 +73,11 @@ export function matchShelters(shelters, origin, hazardCodes = [], { limit = 5, m
   const policies = hazardCodes.map((c) => HAZARDS[c]).filter((p) => p && p.shelterTypes.length > 0);
   for (const policy of policies) {
     const found = nearest(shelters, origin, policy.shelterTypes, policy.excludeUnderground, limit, maxDistanceM);
-    if (found.length > 0) return found;
+    if (found.length > 0) return { shelters: found, fallback: false };
   }
-  // 발효 중인 재난이 없거나 맞는 대피소가 없으면 종류 무관 가장 가까운 곳
-  return nearest(shelters, origin, SHELTER_TYPES, policies.some((p) => p.excludeUnderground), limit, maxDistanceM);
+  // 발효 중인 재난이 없거나 맞는 대피소가 없으면 종류 무관 가장 가까운 곳 (맞는 게 없었다면 fallback 표시)
+  const any = nearest(shelters, origin, SHELTER_TYPES, policies.some((p) => p.excludeUnderground), limit, maxDistanceM);
+  return { shelters: any, fallback: policies.length > 0 && any.length > 0 };
 }
 
 function nearest(shelters, origin, allowed, excludeUnderground, limit, maxDistanceM) {
@@ -90,5 +98,16 @@ export function sheltersInBounds(shelters, { minLat, minLng, maxLat, maxLng }, t
   return shelters
     .filter((s) => s.lat >= minLat && s.lat <= maxLat && s.lng >= minLng && s.lng <= maxLng)
     .filter((s) => !types || types.includes(s.type))
+    .slice(0, limit);
+}
+
+/** 이름(또는 주소)에 검색어가 들어간 대피소 — 공백·대소문자 무시 */
+export function searchShelters(shelters, query, limit = 5) {
+  const norm = (v) => String(v ?? '').replace(/\s+/g, '').toLowerCase();
+  const q = norm(query);
+  if (!q) return [];
+  return shelters
+    .filter((s) => norm(s.name).includes(q) || norm(s.address).includes(q))
+    .sort((a, b) => a.name.length - b.name.length || a.name.localeCompare(b.name))
     .slice(0, limit);
 }

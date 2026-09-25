@@ -1,5 +1,7 @@
 # Climate Disaster Safety Map
 
+[![CI](https://github.com/minjun1177/LYA-ESG-contest/actions/workflows/ci.yml/badge.svg)](https://github.com/minjun1177/LYA-ESG-contest/actions/workflows/ci.yml)
+
 A two-way disaster safety web app built on **OpenStreetMap**. It visualizes **nationwide weather alerts and earthquakes** across South Korea, shows a **risk traffic light** for the user's location, recommends **shelters suited to the current disaster**, and lets citizens **report street-level hazards in real time**.
 Entry for the ESG Problem-Solving Vibe Coding Challenge (high school division) — **data-driven type / E & S areas**.
 
@@ -21,6 +23,8 @@ Entry for the ESG Problem-Solving Vibe Coding Challenge (high school division) �
 | **3. Real-time neighborhood hazard reports** | Tap the map to report flooding, road damage, fallen trees, etc. Reports appear on every user's map instantly and disappear after 24 h or 3 "resolved" votes |
 
 - **Four screens:** Home (location, weather) → Risk (traffic light, shelters) → Safety map (report button) → What to do (SOS share, 119/112)
+- **Responsive:** phones get a bottom tab bar; on **PC (≥ 1024 px)** the map stays on the right and the panels switch on the left
+- **Place search:** search the map by name (e.g. `서울시청`, `구로역`) via OpenStreetMap **Nominatim**, plus matching shelters; any result can be **set as my location** — handy on plain HTTP where GPS is blocked
 - **Multilingual:** every UI string lives in `public/locales/*.json` — switch **한국어 / English** from the top-right selector
 - **Demo mode:** a "disaster simulation" selector lets you present even when no real alert is active (clearly labelled on screen)
 
@@ -56,6 +60,10 @@ npm run dev        # auto-restart on file save
 npm test           # unit, API and locale tests
 npm run lint       # ESLint
 ```
+
+**CI:** GitHub Actions runs `npm run lint` and `npm test` on **Node 22 and 24** for every push to `main` and every pull request (`.github/workflows/ci.yml`).
+
+**Browser (E2E) testing:** follow [`docs/E2E_TESTING.md`](docs/E2E_TESTING.md) in a session that can run Playwright headed.
 
 Browser GPS works on **localhost**.
 
@@ -114,18 +122,37 @@ npm run tunnel
 
 ### Adding shelter data (CSV)
 
-Download shelter CSVs from data.go.kr (cooling centers, warming centers, outdoor earthquake sites, civil defense shelters, temporary housing, …) and convert them. **EUC-KR and UTF-8 are detected automatically.**
+**Real shelters (no login, no key):** a curated list of data.go.kr file datasets lives in `data/shelter-sources.json` (Seoul Geumcheon-gu / Jung-gu / Gwangjin-gu and Daejeon Seo-gu, license: unrestricted).
 
 ```bash
-# Cooling-center CSV → data/shelters/heat.csv
-npm run import:shelters -- --type heat ~/Downloads/cooling-centers.csv
+# 1. Download and convert every dataset in data/shelter-sources.json → data/shelters/real-*.csv
+npm run fetch:shelters
 
-# Civil defense shelters (underground flag detected from a column containing "지하")
-npm run import:shelters -- --type civil_defense ~/Downloads/civil-defense.csv
-
-# Stop using the sample shelters
-rm data/shelters/sample-shelters.csv
+# 2. Restart the server — once real data exists, the sample shelters are ignored automatically
+npm start
 ```
+
+**One more dataset by its data.go.kr number** (the number in `https://www.data.go.kr/data/<number>/fileData.do`):
+
+```bash
+# Seoul Geumcheon-gu cooling centers → data/shelters/heat.csv
+npm run import:shelters -- --type heat --datago 15116079
+
+# Or a CSV you downloaded yourself (EUC-KR / UTF-8 detected automatically)
+npm run import:shelters -- --type civil_defense ~/Downloads/civil-defense.csv
+```
+
+- Rows with **swapped latitude/longitude** (it happens in real data) are fixed automatically.
+- Datasets **without coordinates** (address only) are rejected with a clear error.
+- `data/shelters/real-*.csv` is **not committed** — run `npm run fetch:shelters` after cloning.
+
+**Where to get more coverage (needs your account):**
+
+| Source | What you get | What you must do |
+| --- | --- | --- |
+| [Seoul Open Data](https://data.seoul.go.kr) | Seoul-wide cooling centers (`OA-21065`), outdoor earthquake sites (`OA-21063`), warming centers | Download the CSV in a browser, then `npm run import:shelters -- --type … file.csv` |
+| [Disaster Safety Data Platform](https://www.safetydata.go.kr) | Nationwide MOIS shelters (earthquake sites, civil defense, temporary housing) | Sign up and apply for each dataset (file download is limited to 100 rows; full data needs its own API key) |
+| data.go.kr district files | Other cities / districts | Add `{ "id", "type", "out", "title" }` to `data/shelter-sources.json` if the file has coordinates |
 
 | `--type` | Shelter kind | Recommended for |
 | --- | --- | --- |
@@ -166,6 +193,10 @@ npm test
 | `REPORT_RATE_LIMIT` | `5` | Reports allowed per IP per window |
 | `REPORT_RATE_WINDOW_MIN` | `10` | Rate-limit window (minutes) |
 | `API_CACHE_MINUTES` | `5` | KMA response cache time |
+| `NOMINATIM_URL` | `https://nominatim.openstreetmap.org` | Place-search server (point it at a self-hosted Nominatim if needed) |
+| `NOMINATIM_USER_AGENT` | `climate-safety-dashboard/0.1` | App identifier sent to Nominatim (**required** by its usage policy) |
+| `NOMINATIM_EMAIL` | *(empty)* | Contact email sent to Nominatim (recommended for the public server) |
+| `SEARCH_RATE_LIMIT` | `20` | Searches allowed per IP per minute |
 | `TUNNEL_SERVER` | *(required)* | minitunnel server `host:port` |
 | `TUNNEL_TOKEN` | *(required)* | minitunnel token |
 | `TUNNEL_REMOTE_PORT` | `8000` | Public port on the server (8000–8002, 8496, 8497, 8516, 8517) |
@@ -192,6 +223,8 @@ LYA-ESG-contest/
 │   ├── config.js            # .env → settings
 │   ├── routes/api.js        # /api/* (errors returned as language-neutral codes)
 │   ├── services/kma.js      # KMA alerts / quakes / nowcast + cache + samples
+│   ├── services/geocoder.js # place search (Nominatim) with throttle + cache
+│   ├── services/dataGoFile.js # download data.go.kr file datasets by id
 │   └── lib/
 │       ├── geo.js           # distance, point-in-polygon, KMA grid conversion
 │       ├── provinces.js     # province boundaries, KMA region-name parsing
@@ -199,6 +232,7 @@ LYA-ESG-contest/
 │       ├── hazards.js       # per-hazard shelter policy
 │       ├── risk.js          # risk traffic-light assessment
 │       ├── shelters.js      # shelter CSV loading and matching
+│       ├── shelterImport.js # public CSV → shelter format (column detection, lat/lng fix)
 │       ├── reportStore.js   # citizen reports (node:sqlite)
 │       ├── events.js        # real-time push (Server-Sent Events)
 │       ├── rateLimit.js     # report flood protection
@@ -215,12 +249,18 @@ LYA-ESG-contest/
 ├── data/
 │   ├── provinces.geojson    # province boundaries (Statistics Korea)
 │   ├── shelters/            # shelter CSVs (sample-shelters.csv is demo data)
-│   └── samples/             # sample alerts / quakes / weather used without a key
+│   ├── samples/             # sample alerts / quakes / weather used without a key
+│   └── shelter-sources.json # real shelter datasets for `npm run fetch:shelters`
+├── docs/
+│   └── E2E_TESTING.md       # Playwright headed test scenarios
 ├── scripts/
-│   ├── import-shelters.js   # convert data.go.kr shelter CSVs
+│   ├── import-shelters.js   # convert one shelter CSV (file or --datago id)
+│   ├── fetch-shelters.js    # download every dataset in shelter-sources.json
 │   ├── tunnel.sh            # run the minitunnel client
 │   └── gen-cert.sh          # self-signed HTTPS certificate
 ├── test/                    # node:test unit, API and locale tests
+├── CLAUDE.md                # notes for Claude sessions
+├── .github/workflows/ci.yml # lint + test on Node 22 / 24
 ├── .env.example
 └── package.json
 ```
@@ -234,5 +274,7 @@ LYA-ESG-contest/
 | **Browser permissions** | Location (GPS) — requestable **only on HTTPS or localhost** |
 | **Tunnel** | `minitunnel` binary is not tracked in git; place it in the project root |
 | **Map** | © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL), [Leaflet](https://leafletjs.com) (BSD-2) |
+| **Search** | [Nominatim](https://nominatim.org) — the public server allows **≤ 1 request/s** and no search-as-you-type; the app queues requests server-side, caches results for 24 h and searches only on submit ([usage policy](https://operations.osmfoundation.org/policies/nominatim/)) |
 | **Data** | KMA and Ministry of the Interior and Safety open data (KOGL); province boundaries: Statistics Korea via [southkorea-maps](https://github.com/southkorea/southkorea-maps) |
+| **Shelter data** | data.go.kr file datasets listed in `data/shelter-sources.json` (license: unrestricted); source: each local government |
 | **Disclaimer** | Sample shelters and alerts are fictional demo data. In a real disaster, **follow emergency alerts and 119 instructions first**. |

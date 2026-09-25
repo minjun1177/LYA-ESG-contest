@@ -19,10 +19,12 @@ function hazardLabel(w) {
   return `${t(`hazard.${w.hazard}.name`)} ${t(`level.${w.level}`)}`;
 }
 
-export function createMapView({ api, onPick, onResolveReport, getConfig }) {
+export function createMapView({ api, onPick, onResolveReport, onSetLocation, getConfig }) {
   const map = L.map('map', { zoomControl: true }).setView(KOREA_CENTER, KOREA_ZOOM);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
+    // OSM 타일 이용 정책: Referer 필수 (페이지 정책과 무관하게 origin 을 보냄)
+    referrerPolicy: 'strict-origin-when-cross-origin',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
 
@@ -33,6 +35,7 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
     recommended: L.layerGroup().addTo(map),
     reports: L.layerGroup().addTo(map),
     user: L.layerGroup().addTo(map),
+    search: L.layerGroup().addTo(map),
   };
 
   const state = {
@@ -165,6 +168,11 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
           .bindPopup(() => shelterPopup(s)),
       );
     }
+  }
+
+  // 추천 대피소(번호 마커)는 추천 목록이 바뀔 때만 다시 그린다.
+  // 지도 이동마다 다시 그리면 열려던 팝업의 마커가 사라진다.
+  function renderRecommended() {
     layers.recommended.clearLayers();
     state.recommended.forEach((s, i) => {
       const marker = L.marker([s.lat, s.lng], {
@@ -199,6 +207,7 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
 
   function setRecommended(shelters) {
     state.recommended = shelters;
+    renderRecommended();
     renderShelters();
   }
 
@@ -269,6 +278,7 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
 
   function startPick(mode) {
     state.pickMode = mode;
+    map.closePopup();
     hintText.textContent = t(mode === 'report' ? 'map.pickReportHint' : 'map.pickLocationHint');
     hint.hidden = false;
     view.classList.add('picking');
@@ -300,9 +310,52 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
     if (marker) setTimeout(() => marker.openPopup(), 300);
   }
 
+  // ---------- 검색 결과 ----------
+  // result: { lat, lng, name, sub, bbox?, shelter? } — 대피소면 대피소 팝업, 아니면 장소 팝업
+  function showSearchResult(result) {
+    layers.search.clearLayers();
+    const popup = () => {
+      const box = result.shelter ? shelterPopup(result.shelter) : el('div', 'popup');
+      if (!result.shelter) {
+        box.append(el('h4', null, result.name));
+        if (result.sub) box.append(el('p', 'muted small', result.sub));
+      }
+      const btn = el('button', 'btn small primary', t('search.setMyLocation'));
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        map.closePopup();
+        layers.search.clearLayers();
+        onSetLocation({ lat: result.lat, lng: result.lng });
+      });
+      box.append(btn);
+      return box;
+    };
+    const marker = L.marker([result.lat, result.lng], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="report-marker" style="background:#0f172a"><span>⌕</span></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -26],
+      }),
+      zIndexOffset: 900,
+    }).bindPopup(popup);
+    layers.search.addLayer(marker);
+
+    // 넓은 지역(구·시 등)은 경계 범위에 맞추고, 건물·역 등은 가까이 확대
+    const b = result.bbox;
+    const span = b ? Math.max(b.north - b.south, b.east - b.west) : 0;
+    if (b && span > 0.01) map.fitBounds([[b.south, b.west], [b.north, b.east]], { maxZoom: 16 });
+    else map.setView([result.lat, result.lng], 16);
+    setTimeout(() => marker.openPopup(), 300);
+  }
+
   function focusShelter(id) {
     const s = state.recommended.find((x) => x.id === id);
-    if (s) focus(s.lat, s.lng, 16, s.marker);
+    if (!s) return;
+    map.setView([s.lat, s.lng], 16);
+    // 이동이 끝난 뒤, 그 시점의 마커를 찾아 연다 (그사이 추천 목록이 갱신됐을 수도 있음)
+    setTimeout(() => state.recommended.find((x) => x.id === id)?.marker?.openPopup(), 300);
   }
 
   /** 언어가 바뀌면 이름이 들어간 컨트롤·안내를 다시 만든다 (팝업은 열 때마다 새로 생성됨) */
@@ -329,6 +382,8 @@ export function createMapView({ api, onPick, onResolveReport, getConfig }) {
     focus,
     focusShelter,
     relocalize,
+    showSearchResult,
+    clearSearchResult: () => layers.search.clearLayers(),
     invalidate: () => map.invalidateSize(),
     showUserArea: () => state.user && map.setView([state.user.lat, state.user.lng], 14),
   };

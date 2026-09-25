@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { EventHub } from './lib/events.js';
 import { ReportStore } from './lib/reportStore.js';
 import { loadShelters } from './lib/shelters.js';
+import { Geocoder } from './services/geocoder.js';
 import { KmaService } from './services/kma.js';
 
 const config = loadConfig();
@@ -18,8 +19,13 @@ const reportStore = new ReportStore({
   resolveThreshold: config.reportResolveThreshold,
 });
 const events = new EventHub();
+const geocoder = new Geocoder({
+  baseUrl: config.nominatimUrl,
+  userAgent: config.nominatimUserAgent,
+  email: config.nominatimEmail,
+});
 
-const app = createApp({ config, kma, shelters, reportStore, events });
+const app = createApp({ config, kma, geocoder, shelters, reportStore, events });
 
 // 만료된 제보를 주기적으로 지우고 접속자에게 알림
 const purgeTimer = setInterval(() => {

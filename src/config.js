@@ -41,5 +41,10 @@ export function loadConfig(env = process.env) {
     reportRateLimit: toInt(env.REPORT_RATE_LIMIT, 5),
     reportRateWindowMin: toInt(env.REPORT_RATE_WINDOW_MIN, 10),
     cacheMinutes: toInt(env.API_CACHE_MINUTES, 5),
+    // 장소 검색(Nominatim). 공개 서버 이용 정책상 앱 식별 User-Agent 필수, 연락처 이메일 권장
+    nominatimUrl: env.NOMINATIM_URL || 'https://nominatim.openstreetmap.org',
+    nominatimUserAgent: env.NOMINATIM_USER_AGENT || 'climate-safety-dashboard/0.1',
+    nominatimEmail: env.NOMINATIM_EMAIL || '',
+    searchRateLimit: toInt(env.SEARCH_RATE_LIMIT, 20),
   };
 }

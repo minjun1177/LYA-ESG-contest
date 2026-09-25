@@ -10,7 +10,8 @@ export function createApp(deps) {
 
   app.use((req, res, next) => {
     res.set('X-Content-Type-Options', 'nosniff');
-    res.set('Referrer-Policy', 'same-origin');
+    // OSM 타일 서버는 Referer 가 없으면 'Access blocked' 이미지를 준다 → 다른 사이트에는 origin 만 전송
+    res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     next();
   });
 
