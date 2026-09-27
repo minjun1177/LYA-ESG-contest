@@ -216,6 +216,13 @@
     "legendWarning": "Warning",
     "legendAdvisory": "Advisory",
     "legendNone": "No alert",
+    "legendTitle": "Legend",
+    "legendToggle": "Show or hide legend",
+    "legendQuake": "Earthquake (size = magnitude)",
+    "legendReport": "Citizen hazard report",
+    "legendShelter": "Shelter",
+    "legendHint": "Tap a coloured province or its label to see the active alerts.",
+    "partial": "(partial)",
     "reportButton": "Report a hazard",
     "pickReportHint": "Tap the map where the hazard is",
     "pickLocationHint": "Tap the map at your location",
@@ -239,6 +246,8 @@
       "other": "Other"
     },
     "descriptionLabel": "Description (optional, up to {max} characters)",
+    "descriptionLabelRequired": "Description (required, up to {max} characters)",
+    "descriptionPlaceholderRequired": "Describe the hazard, e.g. A construction fence is about to fall",
     "descriptionPlaceholder": "e.g. Knee-deep water at the alley entrance",
     "submit": "Submit report",
     "cancel": "Cancel",
@@ -251,6 +260,7 @@
   },
   "quake": {
     "title": "Magnitude {magnitude} earthquake",
+    "label": "M{magnitude} quake",
     "depth": "Depth {depth} km",
     "intensity": "Max intensity {intensity}"
   },
@@ -283,6 +293,7 @@
     "out_of_korea": "Only locations in South Korea can be reported.",
     "invalid_category": "Choose a report type.",
     "description_too_long": "The description must be {max} characters or fewer.",
+    "description_required": "An \"Other\" report needs a description of the hazard.",
     "rate_limited": "Too many reports. Try again in {retryAfterSec} seconds.",
     "not_found": "Not found.",
     "invalid_bbox": "The map area is invalid.",

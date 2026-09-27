@@ -19,3 +19,7 @@ test('OSM tiles are requested with a Referer (tile usage policy)', () => {
 test('pick mode lets clicks through Leaflet layers (popup handlers stop map clicks)', () => {
   assert.match(css, /\.view-map\.picking \.leaflet-interactive\s*\{\s*pointer-events:\s*none;?\s*\}/);
 });
+
+test('coloured provinces carry a permanent hazard label (colour alone is not enough)', () => {
+  assert.match(mapJs, /bindTooltip\(provinceLabel\(list\),\s*\{\s*permanent:\s*true/);
+});

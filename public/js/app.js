@@ -280,7 +280,7 @@ function renderReportDialogText() {
   }));
   if (prev) select.value = prev;
   $('report-description').maxLength = cfg.reportDescriptionMax;
-  $('report-desc-label').textContent = t('report.descriptionLabel', { max: cfg.reportDescriptionMax });
+  renderDescriptionRequirement();
   $('report-expires').textContent = t('report.expiresNote', { hours: cfg.reportTtlHours });
 }
 
@@ -408,6 +408,17 @@ function startGps() {
 }
 
 // ---------------------------------------------------------------- 제보
+const descriptionRequired = () => state.config.reportDescriptionRequired.includes($('report-category').value);
+
+// '기타' 처럼 설명이 필수인 종류를 고르면 라벨과 입력 안내를 바꾼다
+function renderDescriptionRequirement() {
+  const required = descriptionRequired();
+  const max = state.config.reportDescriptionMax;
+  $('report-desc-label').textContent = t(required ? 'report.descriptionLabelRequired' : 'report.descriptionLabel', { max });
+  $('report-description').setAttribute('aria-required', String(required));
+  $('report-description').placeholder = t(required ? 'report.descriptionPlaceholderRequired' : 'report.descriptionPlaceholder');
+}
+
 function openReportDialog(latlng) {
   state.pendingReport = latlng;
   $('report-error').hidden = true;
@@ -419,6 +430,12 @@ function openReportDialog(latlng) {
 async function submitReport(event) {
   event.preventDefault();
   if (!state.pendingReport) return;
+  if (descriptionRequired() && !$('report-description').value.trim()) {
+    $('report-error').textContent = t('error.description_required');
+    $('report-error').hidden = false;
+    $('report-description').focus();
+    return;
+  }
   const btn = $('btn-report-submit');
   btn.disabled = true;
   try {
@@ -602,6 +619,10 @@ function bindEvents() {
   });
   $('btn-report').addEventListener('click', () => mapView.startPick('report'));
   $('report-form').addEventListener('submit', submitReport);
+  $('report-category').addEventListener('change', () => {
+    $('report-error').hidden = true;
+    renderDescriptionRequirement();
+  });
   $('btn-report-cancel').addEventListener('click', () => $('report-dialog').close());
 
   const emergency = $('emergency');

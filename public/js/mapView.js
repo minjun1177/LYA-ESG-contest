@@ -6,7 +6,7 @@ import { t, formatAgo, formatDistance, formatTime } from './i18n.js';
 const KOREA_CENTER = [36.35, 127.8];
 const KOREA_ZOOM = 7;
 const SHELTER_MIN_ZOOM = 11; // 이 배율 이상에서만 화면 범위 대피소를 불러옴
-const COLORS = { warning: '#dc2626', advisory: '#f59e0b', none: '#94a3b8', shelter: '#16a34a', recommended: '#2563eb', quake: '#7c3aed' };
+const COLORS = { warning: '#dc2626', advisory: '#f59e0b', warningPin: '#dc2626', none: '#94a3b8', shelter: '#16a34a', recommended: '#2563eb', quake: '#7c3aed' };
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -62,22 +62,55 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
       .addTo(map);
   }
 
+  // 범례: 제목 버튼으로 접고 펼친다 (상태는 브라우저에 기억)
+  const LEGEND_KEY = 'legendCollapsed';
+  let legendCollapsed = false;
+  try {
+    legendCollapsed = localStorage.getItem(LEGEND_KEY) === '1';
+  } catch {
+    // 저장소를 쓸 수 없으면 펼친 상태로 시작
+  }
+
+  function legendRow(swatchStyle, key) {
+    const row = el('div', 'legend-row');
+    const swatch = el('i');
+    Object.assign(swatch.style, swatchStyle);
+    row.append(swatch, el('span', null, t(key)));
+    return row;
+  }
+
   function renderLegend() {
     const legend = document.getElementById('map-legend');
-    legend.replaceChildren();
-    for (const [color, key] of [[COLORS.warning, 'map.legendWarning'], [COLORS.advisory, 'map.legendAdvisory'], [COLORS.none, 'map.legendNone']]) {
-      const row = el('div');
-      const swatch = el('i');
-      swatch.style.background = color;
-      row.append(swatch, el('span', null, t(key)));
-      legend.append(row);
-    }
-    const shelterRow = el('div');
-    const s = el('i');
-    s.style.background = COLORS.recommended;
-    s.style.borderRadius = '50%';
-    shelterRow.append(s, el('span', null, t('map.recommended')));
-    legend.append(shelterRow);
+    const toggle = el('button', 'legend-toggle');
+    toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', String(!legendCollapsed));
+    toggle.setAttribute('aria-label', t('map.legendToggle'));
+    toggle.append(el('span', null, t('map.legendTitle')), el('span', 'caret', legendCollapsed ? '▸' : '▾'));
+    toggle.addEventListener('click', () => {
+      legendCollapsed = !legendCollapsed;
+      try {
+        localStorage.setItem(LEGEND_KEY, legendCollapsed ? '1' : '0');
+      } catch {
+        // 기억하지 못해도 동작에는 문제 없음
+      }
+      renderLegend();
+    });
+
+    const body = el('div', 'legend-body');
+    body.hidden = legendCollapsed;
+    body.append(
+      legendRow({ background: COLORS.warning }, 'map.legendWarning'),
+      legendRow({ background: COLORS.advisory }, 'map.legendAdvisory'),
+      legendRow({ background: COLORS.none }, 'map.legendNone'),
+      legendRow({ background: COLORS.quake, borderRadius: '50%', opacity: '0.7' }, 'map.legendQuake'),
+      legendRow({ background: COLORS.warningPin, borderRadius: '50% 50% 50% 0' }, 'map.legendReport'),
+      legendRow({ background: COLORS.shelter, borderRadius: '50%' }, 'map.legendShelter'),
+      legendRow({ background: COLORS.recommended, borderRadius: '50%' }, 'map.recommended'),
+    );
+    const hint = el('p', 'legend-hint', t('map.legendHint'));
+    body.append(hint);
+    legend.classList.toggle('collapsed', legendCollapsed);
+    legend.replaceChildren(toggle, body);
   }
 
   // ---------- 시·도 특보 폴리곤 ----------
@@ -105,8 +138,27 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
     restyleProvinces();
   }
 
+  // 특보가 있는 시·도 가운데에 '호우 경보' 같은 이름표를 띄운다 (색만으로는 무슨 재난인지 알 수 없음)
+  function provinceLabel(list) {
+    const box = el('div');
+    for (const w of list) {
+      box.append(el('div', null, w.partial ? `${hazardLabel(w)} ${t('map.partial')}` : hazardLabel(w)));
+    }
+    return box;
+  }
+
   function restyleProvinces() {
     layers.provinces.setStyle(provinceStyle);
+    layers.provinces.eachLayer((layer) => {
+      layer.unbindTooltip();
+      const list = state.byProvince[layer.feature.properties.id] ?? [];
+      if (list.length === 0) return;
+      layer.bindTooltip(provinceLabel(list), {
+        permanent: true,
+        direction: 'center',
+        className: `hazard-label ${list[0].level}`,
+      });
+    });
   }
 
   // ---------- 지진 ----------
@@ -128,6 +180,12 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
         if (q.depthKm) box.append(el('p', null, t('quake.depth', { depth: q.depthKm })));
         if (q.intensity) box.append(el('p', null, t('quake.intensity', { intensity: q.intensity })));
         return box;
+      });
+      marker.bindTooltip(t('quake.label', { magnitude: q.magnitude }), {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -(4 + q.magnitude * 3)],
+        className: 'hazard-label quake',
       });
       layers.earthquakes.addLayer(marker);
     }
@@ -362,6 +420,8 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
   function relocalize() {
     buildLayerControl();
     renderLegend();
+    restyleProvinces(); // 지도 위 재난 이름표도 새 언어로
+    renderEarthquakes();
     if (state.pickMode) startPick(state.pickMode);
     map.closePopup();
   }

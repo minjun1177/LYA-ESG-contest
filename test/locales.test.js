@@ -42,7 +42,7 @@ test('every server code has a translation in every locale', () => {
     ...['warning', 'earthquake', 'reports', 'heavyRainNow', 'hot', 'cold', 'none'].map((r) => `risk.reason.${r}`),
     ...['invalid_location', 'out_of_korea', 'invalid_category', 'description_too_long', 'rate_limited',
       'not_found', 'invalid_bbox', 'invalid_simulation', 'invalid_body', 'internal', 'network',
-      'invalid_query', 'search_unavailable', 'search_busy'].map((e) => `error.${e}`),
+      'invalid_query', 'search_unavailable', 'search_busy', 'description_required'].map((e) => `error.${e}`),
     ...['0', '1', '2', '3', '5', '6', '7'].map((p) => `weather.precipType.${p}`),
   ];
   for (const [code, dict] of Object.entries(locales)) {

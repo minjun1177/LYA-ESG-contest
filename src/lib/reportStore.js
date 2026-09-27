@@ -5,6 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 // 시민 위험 제보 종류 (언어 중립 코드). 표시 이름은 public/locales/*.json 의 report.category.<code>
 export const REPORT_CATEGORIES = ['flooding', 'road_damage', 'fallen_tree', 'landslide', 'fire', 'power_line', 'other'];
 export const REPORT_DESCRIPTION_MAX = 200;
+// 종류만으로는 무슨 위험인지 알 수 없어 설명이 꼭 필요한 제보 종류
+export const REPORT_CATEGORIES_REQUIRING_DESCRIPTION = ['other'];
 
 /**
  * 제보 저장소 (Node 내장 SQLite)

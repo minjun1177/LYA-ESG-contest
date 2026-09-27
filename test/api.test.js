@@ -51,6 +51,7 @@ test('GET /api/config exposes language-neutral codes only', async () => {
   assert.ok(cfg.hazards.includes('heavy_rain'));
   assert.ok(!cfg.hazards.includes('high_seas'));
   assert.ok(cfg.reportCategories.includes('flooding'));
+  assert.deepEqual(cfg.reportDescriptionRequired, ['other']);
 });
 
 test('GET /api/situation assesses risk and matches shelters', async () => {
@@ -84,6 +85,13 @@ test('invalid inputs return error codes', async () => {
   assert.deepEqual(await (await post('/api/reports', { lat: 37.5, lng: 127, category: 'zzz' })).json(), { error: 'invalid_category' });
   const long = await post('/api/reports', { lat: 37.5, lng: 127, category: 'fire', description: 'x'.repeat(201) });
   assert.deepEqual(await long.json(), { error: 'description_too_long', max: 200 });
+  // '기타' 제보는 설명 필수 (공백만 있어도 거부)
+  for (const description of [undefined, '', '   ']) {
+    const r = await post('/api/reports', { lat: 37.5, lng: 127, category: 'other', description }, { 'mt-connection-ip': '192.0.2.77' });
+    assert.deepEqual(await r.json(), { error: 'description_required' });
+  }
+  const ok = await post('/api/reports', { lat: 37.5, lng: 127, category: 'other', description: '맨홀 뚜껑 열림' }, { 'mt-connection-ip': '192.0.2.77' });
+  assert.equal(ok.status, 201);
 });
 
 test('reports are created, broadcast, resolved, and rate limited per visitor IP', async () => {

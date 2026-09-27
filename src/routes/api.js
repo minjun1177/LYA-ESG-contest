@@ -3,7 +3,7 @@ import { isInKorea, isValidLatLng, distanceMeters } from '../lib/geo.js';
 import { HAZARDS, HAZARD_CODES, SHELTER_TYPES } from '../lib/hazards.js';
 import { findProvince, loadProvinces } from '../lib/provinces.js';
 import { RateLimiter } from '../lib/rateLimit.js';
-import { REPORT_CATEGORIES, REPORT_DESCRIPTION_MAX } from '../lib/reportStore.js';
+import { REPORT_CATEGORIES, REPORT_CATEGORIES_REQUIRING_DESCRIPTION, REPORT_DESCRIPTION_MAX } from '../lib/reportStore.js';
 import { assessRisk, RISK_RULES } from '../lib/risk.js';
 import { matchShelters, searchShelters, sheltersInBounds } from '../lib/shelters.js';
 import { GeocoderError } from '../services/geocoder.js';
@@ -60,6 +60,7 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
       shelterTypes: SHELTER_TYPES,
       reportCategories: REPORT_CATEGORIES,
       reportDescriptionMax: REPORT_DESCRIPTION_MAX,
+      reportDescriptionRequired: REPORT_CATEGORIES_REQUIRING_DESCRIPTION,
       reportTtlHours: config.reportTtlHours,
       reportResolveThreshold: config.reportResolveThreshold,
       riskRules: RISK_RULES,
@@ -181,6 +182,9 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
     const description = typeof body.description === 'string' ? body.description.trim() : '';
     if (description.length > REPORT_DESCRIPTION_MAX) {
       throw new ApiError(400, 'description_too_long', { max: REPORT_DESCRIPTION_MAX });
+    }
+    if (!description && REPORT_CATEGORIES_REQUIRING_DESCRIPTION.includes(body.category)) {
+      throw new ApiError(400, 'description_required');
     }
 
     const ip = clientIp(req);

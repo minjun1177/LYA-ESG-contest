@@ -59,7 +59,8 @@ npx -y playwright@latest install chromium
 | Language | `#lang-select` (`ko`, `en`) |
 | Data banner | `#source-banner` |
 | GPS / pick | `#btn-gps`, `#btn-pick`, `#location-status` |
-| Map | `#map`, hint `#map-hint`, cancel `#btn-hint-cancel`, legend `#map-legend` |
+| Map | `#map`, hint `#map-hint`, cancel `#btn-hint-cancel`, legend `#map-legend` (toggle `.legend-toggle`, rows `.legend-body`) |
+| Map labels | `.leaflet-tooltip.hazard-label` (`.warning`, `.advisory`, `.quake`) |
 | Map tools | `#btn-nationwide`, `#btn-mylocation` |
 | Search | `#search-input`, `#btn-search`, results `#search-results button` |
 | Report | FAB `#btn-report`, dialog `#report-dialog`, `#report-category`, `#report-description`, `#btn-report-submit`, error `#report-error` |
@@ -119,6 +120,7 @@ Province polygons have popups; Leaflet's popup handler stops map clicks. Picking
 4. B: open the marker popup → "resolved" button → votes `1/3`.
 5. Type 201 chars into `#report-description` → **Expected:** the field stops at **200** (`maxlength`). Close the dialog **without submitting** (a 200-char report is valid and would be saved).
 6. Server-side limit: `POST /api/reports` directly (Playwright `request`) with a 201-char description → **Expected:** HTTP 400 `{ "error": "description_too_long", "max": 200 }`.
+7. "Other" needs a description: open the report dialog, choose category `other` → **Expected:** label switches to "required"; submitting with an empty or spaces-only description shows `#report-error` and **sends no request**. Close the dialog without submitting. Direct `POST` with `category: "other"` and no description → HTTP 400 `{ "error": "description_required" }`.
 
 ### S8 — Place search
 **Nominatim policy:** max ~1 request/s, no search-as-you-type. Run **at most 3 searches per full run**; never loop.
@@ -137,6 +139,13 @@ Province polygons have popups; Leaflet's popup handler stops map clicks. Picking
 ### S10 — SOS
 1. Actions → `#btn-sos`. On Linux Chromium `navigator.share` is absent → clipboard path; if a share sheet opens instead, cancel it and skip step 2.
 2. **Expected:** `#sos-status` says copied; clipboard text contains `openstreetmap.org/?mlat=`.
+
+### S12 — Map legend and hazard labels
+1. Map view → **Expected:** every coloured province shows a `.hazard-label` naming the hazard and level (sample data: Seoul "호우 경보", Daegu "폭염 주의보", Gyeonggi "호우 경보 (일부)"); each earthquake circle shows "지진 M…".
+2. Click `.legend-toggle` → **Expected:** `.legend-body` hidden, `aria-expanded="false"`; reload → still collapsed; click again → rows visible.
+3. Legend rows include warning, advisory, no alert, earthquake, citizen report, shelter, recommended shelter.
+4. Switch to English → labels read e.g. "Heavy rain warning", "M3.1 quake"; legend is English.
+5. Pick mode (S3) still works when clicking on a label.
 
 ### S11 — Failure states
 1. Block `**/api/situation*` (route → abort) and set a location → **Expected:** toast with the network error, UI stays usable.
