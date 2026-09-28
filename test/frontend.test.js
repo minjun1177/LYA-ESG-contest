@@ -23,3 +23,11 @@ test('pick mode lets clicks through Leaflet layers (popup handlers stop map clic
 test('coloured provinces carry a permanent hazard label (colour alone is not enough)', () => {
   assert.match(mapJs, /bindTooltip\(provinceLabel\(list\),\s*\{\s*permanent:\s*true/);
 });
+
+test('report text stays inside its box and keeps line breaks', () => {
+  assert.match(css, /\.popup \.report-desc \{[^}]*white-space:\s*pre-wrap/);
+  assert.match(css, /\.popup p \{[^}]*overflow-wrap:\s*anywhere/);
+  assert.match(css, /\.field textarea \{[^}]*resize:\s*vertical/);
+  assert.match(css, /\.field textarea \{[^}]*max-width:\s*100%/);
+  assert.match(mapJs, /el\('p', 'report-desc', r\.description\)/);
+});

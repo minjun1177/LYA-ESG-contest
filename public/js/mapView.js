@@ -274,7 +274,7 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
     const cfg = getConfig();
     const box = el('div', 'popup');
     box.append(el('h4', null, t(`report.category.${r.category}`)));
-    if (r.description) box.append(el('p', null, r.description));
+    if (r.description) box.append(el('p', 'report-desc', r.description));
     box.append(el('p', 'muted small', formatAgo(r.createdAt)));
     box.append(el('p', 'muted small', t('report.resolveVotes', { votes: r.resolveVotes, threshold: cfg.reportResolveThreshold })));
     const btn = el('button', 'btn small', t('report.resolve'));
@@ -296,7 +296,7 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
     }
     const marker = L.marker([r.lat, r.lng], { icon: reportIcon() });
     const entry = { data: r, marker };
-    marker.bindPopup(() => reportPopup(entry.data));
+    marker.bindPopup(() => reportPopup(entry.data), { minWidth: 200, maxWidth: 280 });
     state.reports.set(r.id, entry);
     layers.reports.addLayer(marker);
   }

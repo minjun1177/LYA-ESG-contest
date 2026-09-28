@@ -179,7 +179,8 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
     if (!isValidLatLng(lat, lng)) throw new ApiError(400, 'invalid_location');
     if (!isInKorea(lat, lng)) throw new ApiError(400, 'out_of_korea');
     if (!REPORT_CATEGORIES.includes(body.category)) throw new ApiError(400, 'invalid_category');
-    const description = typeof body.description === 'string' ? body.description.trim() : '';
+    // 줄바꿈은 그대로 저장 (윈도우 줄바꿈 \r\n 만 \n 으로 통일)
+    const description = typeof body.description === 'string' ? body.description.replace(/\r\n?/g, '\n').trim() : '';
     if (description.length > REPORT_DESCRIPTION_MAX) {
       throw new ApiError(400, 'description_too_long', { max: REPORT_DESCRIPTION_MAX });
     }

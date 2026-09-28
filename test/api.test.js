@@ -92,6 +92,9 @@ test('invalid inputs return error codes', async () => {
   }
   const ok = await post('/api/reports', { lat: 37.5, lng: 127, category: 'other', description: '맨홀 뚜껑 열림' }, { 'mt-connection-ip': '192.0.2.77' });
   assert.equal(ok.status, 201);
+  // 줄바꿈은 유지되고 \r\n 은 \n 으로 통일
+  const multi = await post('/api/reports', { lat: 37.5, lng: 127, category: 'other', description: '1층 침수\r\n2층 정전' }, { 'mt-connection-ip': '192.0.2.78' });
+  assert.equal((await multi.json()).report.description, '1층 침수\n2층 정전');
 });
 
 test('reports are created, broadcast, resolved, and rate limited per visitor IP', async () => {

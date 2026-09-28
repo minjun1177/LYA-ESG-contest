@@ -419,10 +419,18 @@ function renderDescriptionRequirement() {
   $('report-description').placeholder = t(required ? 'report.descriptionPlaceholderRequired' : 'report.descriptionPlaceholder');
 }
 
+// 설명 입력칸은 글 길이에 맞춰 높이가 자동으로 늘고 준다 (최대 높이는 CSS max-height)
+function fitDescriptionHeight() {
+  const box = $('report-description');
+  box.style.height = 'auto';
+  box.style.height = `${box.scrollHeight + 2}px`;
+}
+
 function openReportDialog(latlng) {
   state.pendingReport = latlng;
   $('report-error').hidden = true;
   $('report-description').value = '';
+  $('report-description').style.height = '';
   renderReportDialogText();
   $('report-dialog').showModal();
 }
@@ -619,6 +627,7 @@ function bindEvents() {
   });
   $('btn-report').addEventListener('click', () => mapView.startPick('report'));
   $('report-form').addEventListener('submit', submitReport);
+  $('report-description').addEventListener('input', fitDescriptionHeight);
   $('report-category').addEventListener('change', () => {
     $('report-error').hidden = true;
     renderDescriptionRequirement();

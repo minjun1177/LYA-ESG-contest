@@ -121,6 +121,9 @@ Province polygons have popups; Leaflet's popup handler stops map clicks. Picking
 5. Type 201 chars into `#report-description` → **Expected:** the field stops at **200** (`maxlength`). Close the dialog **without submitting** (a 200-char report is valid and would be saved).
 6. Server-side limit: `POST /api/reports` directly (Playwright `request`) with a 201-char description → **Expected:** HTTP 400 `{ "error": "description_too_long", "max": 200 }`.
 7. "Other" needs a description: open the report dialog, choose category `other` → **Expected:** label switches to "required"; submitting with an empty or spaces-only description shows `#report-error` and **sends no request**. Close the dialog without submitting. Direct `POST` with `category: "other"` and no description → HTTP 400 `{ "error": "description_required" }`.
+8. Long and multi-line text (mobile **and** desktop): type 60 chars with **no spaces** plus two lines separated by Enter into `#report-description`.
+   **Expected:** the textarea grows in height as you type, never gets wider than the dialog (only a vertical resize handle), and the dialog scrolls instead of overflowing the screen.
+   Submit, open the new report's popup → **Expected:** the text wraps inside the popup (no horizontal overflow of `.report-desc`) and both lines appear on separate lines.
 
 ### S8 — Place search
 **Nominatim policy:** max ~1 request/s, no search-as-you-type. Run **at most 3 searches per full run**; never loop.
