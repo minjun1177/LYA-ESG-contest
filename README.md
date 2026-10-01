@@ -20,9 +20,9 @@ Entry for the ESG Problem-Solving Vibe Coding Challenge (high school division) �
 | --- | --- |
 | **1. Nationwide disaster monitoring map** | KMA active alerts drawn as province polygons (**warning** red / **advisory** amber); recent earthquakes as circles |
 | **2. Nearby safety-infrastructure matching** | GPS location + active alerts → risk level (safe / caution / danger). Shelters unsuitable for the disaster are hidden (e.g. heavy rain → no underground shelters). An **evacuation popup** appears at danger level |
-| **3. Real-time neighborhood hazard reports** | Tap the map to report flooding, road damage, fallen trees, etc. Reports appear on every user's map instantly and disappear after 24 h or 3 "resolved" votes |
+| **3. Real-time neighborhood hazard reports** | GPS users report flooding, road damage, fallen trees, etc. within 1 km of where they stand. A report starts **awaiting confirmation** (yellow) and becomes **confirmed** (red) when 3 other devices nearby tap "I saw it too" within 2 hours; otherwise it disappears. Confirmed reports stay 12–72 h by type, or until 3 "resolved" votes |
 
-- **Four screens:** Home (location, weather) → Risk (traffic light, shelters) → Safety map (report button) → What to do (SOS share, 119/112)
+- **Four screens:** Home (summary in this order: location, risk with its official basis, weather, matching shelters, nearby citizen reports, current safety guide) → Risk (full details) → Safety map (citizen report button) → What to do (SOS share, 119/112)
 - **Responsive:** phones get a bottom tab bar; on **PC (≥ 1024 px)** the map stays on the right and the panels switch on the left
 - **Place search:** search the map by name (e.g. `서울시청`, `구로역`) via OpenStreetMap **Nominatim**, plus matching shelters; any result can be **set as my location** — handy on plain HTTP where GPS is blocked
 - **Multilingual:** every UI string lives in `public/locales/*.json` — switch **한국어 / English** from the top-right selector
@@ -88,7 +88,7 @@ npm run tunnel
 
 - **Important:** one public port serves **one** tunnel client. If another minitunnel client already forwards `8000=127.0.0.1:8000`, **skip step 3** — just run the app on local port 8000 and the existing tunnel serves it.
 - The token is passed through `.tunnel/client.toml` (mode 600), **not the command line**, so it never shows up in the process list.
-- http mode forwards the visitor's real IP (`mt-connection-ip`), so the report rate limit applies **per visitor**.
+- http mode forwards the visitor's real IP (`mt-connection-ip`), used for the search rate limit. **Reporting and confirming need GPS, which browsers block on plain HTTP** — use Option C for a demo with citizen reports.
 - **Note:** browsers **block GPS on plain HTTP**. In this mode, use **"Pick on map"** on the Home screen.
 
 ### Option C — Publish over HTTPS (phone GPS)
@@ -107,7 +107,7 @@ npm start
 npm run tunnel
 ```
 
-- tcp mode cannot see visitor IPs, so the report rate limit is **shared by everyone** → raise `REPORT_RATE_LIMIT` if needed.
+- tcp mode cannot see visitor IPs; reports and votes are counted **per device** (a random ID each browser keeps), so this does not affect them.
 
 ---
 
@@ -188,9 +188,13 @@ npm test
 | `TRUST_TUNNEL_HEADER` | `true` | Trust the visitor-IP header added by minitunnel |
 | `DB_PATH` | `data/reports.db` | SQLite file for reports |
 | `SHELTERS_DIR` | `data/shelters` | Folder of shelter CSVs |
-| `REPORT_TTL_HOURS` | `24` | Hours before a report expires |
-| `REPORT_RESOLVE_THRESHOLD` | `3` | "Resolved" votes that remove a report |
-| `REPORT_RATE_LIMIT` | `5` | Reports allowed per IP per window |
+| `REPORT_PENDING_MINUTES` | `120` | How long a report waits for confirmation before it disappears |
+| `REPORT_CONFIRM_THRESHOLD` | `3` | Distinct other devices needed to confirm a report |
+| `REPORT_RESOLVE_THRESHOLD` | `3` | Distinct devices whose "resolved" vote removes a confirmed report |
+| `REPORT_RADIUS_M` | `1000` | Reporting and voting only within this distance of the user's GPS position |
+| `REPORT_GPS_MAX_ACCURACY_M` | `500` | GPS accuracy required to report or vote |
+| `REPORT_RATE_LIMIT` | `5` | Reports allowed per device per window |
+| `REPORT_IP_RATE_LIMIT` | `100` | Reports + votes allowed per IP per window (stops bypassing the device limit with fresh IDs; in tcp tunnel mode it is a global cap) |
 | `REPORT_RATE_WINDOW_MIN` | `10` | Rate-limit window (minutes) |
 | `API_CACHE_MINUTES` | `5` | KMA response cache time |
 | `NOMINATIM_URL` | `https://nominatim.openstreetmap.org` | Place-search server (point it at a self-hosted Nominatim if needed) |
@@ -207,9 +211,32 @@ npm test
 
 | Signal | Condition |
 | --- | --- |
-| **Danger (red)** | A **warning** is active in the user's province / **M4.0+ earthquake** within 100 km in the last 24 h |
-| **Caution (amber)** | An **advisory** is active / citizen report within 1 km / rain ≥ 30 mm/h / ≥ 33 °C / ≤ −12 °C |
-| **Safe (green)** | None of the above |
+Only **official criteria** decide the level; each reason on screen names its basis. Citizen reports are shown for reference but never change the level.
+
+| Signal | Condition | Official basis |
+| --- | --- | --- |
+| **Danger (red)** | A KMA **warning** (경보) is active in the user's province | KMA weather-warning criteria |
+| **Danger (red)** | Earthquake intensity **Ⅲ or higher** in the user's province (last 24 h) | Earthquake alert criteria: intensity Ⅲ+ areas get an emergency alert |
+| **Caution (amber)** | A KMA **advisory** (주의보) is active in the user's province | KMA weather-warning criteria |
+| **Caution (amber)** | Earthquake intensity **Ⅱ** in the user's province (last 24 h) | Earthquake alert criteria: intensity Ⅱ areas get a safety notice |
+| **Caution (amber)** | Rain **≥ 30 mm/h** observed now | KMA forecast term "very heavy rain" |
+| **Safe (green)** | None of the above | — |
+
+- **Intensity per province** is read from the KMA earthquake bulletin (`Ⅳ(경북),Ⅲ(대구)`); when a bulletin carries only the maximum, it is applied to the epicentre's province.
+- The **24-hour window** for earthquakes is an app rule (there is no official one).
+
+### Shelter rules (`src/lib/hazards.js`)
+
+| Hazard | Shelters offered | Basis |
+| --- | --- | --- |
+| Earthquake | Outdoor earthquake evacuation sites, then earthquake-ready housing; **no underground** | MOIS outdoor evacuation site guideline |
+| Heavy rain / typhoon / storm surge / tsunami | Temporary housing (above ground); **no underground** | MOIS heavy-rain guidance: leave underground spaces at once |
+| Heat wave / cold wave | Cooling / warming centers | MOIS heat & cold shelter programmes |
+| Strong wind / heavy snow | Temporary housing / warming centers | — |
+
+- **Civil defense shelters** are wartime facilities and are never offered for a natural hazard.
+- When no matching shelter exists nearby, the nearest above-ground shelter is shown **with a notice** saying so.
+- Every shelter popup shows its **source dataset and reference date**.
 
 ---
 

@@ -10,6 +10,7 @@
 // --datago      data.go.kr 파일데이터 번호 (입력 파일 대신)
 // --underground auto(기본: '지하' 표기가 있는 열로 판단) | yes | no
 // --out         출력 경로 (기본: data/shelters/<type>.csv)
+// --source      화면에 표시할 출처 (기본: 원본 파일 이름)
 //
 // 열 이름은 데이터셋마다 달라서 흔히 쓰이는 이름 후보로 자동 매칭한다.
 // 위도·경도가 뒤바뀐 행은 자동으로 바로잡고, 위경도(WGS84)가 없는 행은 건너뛴다.
@@ -20,7 +21,7 @@ import { parseArgs } from 'node:util';
 import { ROOT_DIR } from '../src/config.js';
 import { decodeText, parseCsvObjects, toCsv } from '../src/lib/csv.js';
 import { SHELTER_TYPES } from '../src/lib/hazards.js';
-import { convertShelterRows } from '../src/lib/shelterImport.js';
+import { convertShelterRows, dateFromFilename } from '../src/lib/shelterImport.js';
 import { SHELTER_CSV_HEADER } from '../src/lib/shelters.js';
 import { downloadDataGoFile } from '../src/services/dataGoFile.js';
 
@@ -40,6 +41,7 @@ async function main() {
         type: { type: 'string' },
         datago: { type: 'string' },
         underground: { type: 'string', default: 'auto' },
+        source: { type: 'string' },
         out: { type: 'string' },
       },
     });
@@ -54,13 +56,18 @@ async function main() {
   if (!['auto', 'yes', 'no'].includes(values.underground)) usage('--underground must be auto, yes or no');
 
   let buffer;
+  let filename;
+  let updatedAt = '';
   try {
     if (values.datago) {
       const file = await downloadDataGoFile(values.datago);
       console.log(`downloaded ${file.filename} from ${file.sourceUrl}`);
       buffer = file.buffer;
+      filename = file.filename;
+      updatedAt = file.updatedAt;
     } else {
       buffer = readFileSync(positionals[0]);
+      filename = path.basename(positionals[0]);
     }
   } catch (err) {
     usage(err.message);
@@ -68,7 +75,12 @@ async function main() {
 
   let result;
   try {
-    result = convertShelterRows(parseCsvObjects(decodeText(buffer)), { type: values.type, underground: values.underground });
+    result = convertShelterRows(parseCsvObjects(decodeText(buffer)), {
+      type: values.type,
+      underground: values.underground,
+      source: values.source ?? filename.replace(/\.csv$/i, '').replace(/[_ ]?\d{8}$/, ''),
+      fallbackDate: dateFromFilename(filename) || updatedAt,
+    });
   } catch (err) {
     usage(err.message);
   }

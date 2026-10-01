@@ -8,7 +8,7 @@ import path from 'node:path';
 import { ROOT_DIR } from '../src/config.js';
 import { decodeText, parseCsvObjects, toCsv } from '../src/lib/csv.js';
 import { SHELTER_TYPES } from '../src/lib/hazards.js';
-import { convertShelterRows } from '../src/lib/shelterImport.js';
+import { convertShelterRows, dateFromFilename } from '../src/lib/shelterImport.js';
 import { SHELTER_CSV_HEADER } from '../src/lib/shelters.js';
 import { downloadDataGoFile } from '../src/services/dataGoFile.js';
 
@@ -25,7 +25,11 @@ async function main() {
       if (!SHELTER_TYPES.includes(ds.type)) throw new Error(`unknown type "${ds.type}"`);
       if (!/^[\w.-]+\.csv$/.test(ds.out)) throw new Error(`invalid output file name "${ds.out}"`);
       const file = await downloadDataGoFile(ds.id);
-      const { shelters, skipped, swapped } = convertShelterRows(parseCsvObjects(decodeText(file.buffer)), { type: ds.type });
+      const { shelters, skipped, swapped } = convertShelterRows(parseCsvObjects(decodeText(file.buffer)), {
+        type: ds.type,
+        source: ds.title,
+        fallbackDate: dateFromFilename(file.filename) || file.updatedAt,
+      });
       writeFileSync(path.join(OUT_DIR, ds.out), toCsv(SHELTER_CSV_HEADER, shelters));
       summary.push({ id: ds.id, title: ds.title, ok: true, count: shelters.length, skipped, swapped, out: ds.out });
     } catch (err) {

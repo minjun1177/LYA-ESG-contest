@@ -39,10 +39,12 @@ test('every server code has a translation in every locale', () => {
     ...PROVINCE_IDS.map((p) => `province.${p}`),
     ...REPORT_CATEGORIES.map((c) => `report.category.${c}`),
     ...['safe', 'caution', 'danger'].flatMap((l) => [`risk.level.${l}`, `risk.levelDesc.${l}`]),
-    ...['warning', 'earthquake', 'reports', 'heavyRainNow', 'hot', 'cold', 'none'].map((r) => `risk.reason.${r}`),
+    ...['warning', 'earthquake', 'veryHeavyRain', 'none'].map((r) => `risk.reason.${r}`),
+    ...['kma_warning', 'quake_alert', 'kma_rain_term'].map((b) => `risk.basis.${b}`),
     ...['invalid_location', 'out_of_korea', 'invalid_category', 'description_too_long', 'rate_limited',
       'not_found', 'invalid_bbox', 'invalid_simulation', 'invalid_body', 'internal', 'network',
-      'invalid_query', 'search_unavailable', 'search_busy', 'description_required'].map((e) => `error.${e}`),
+      'invalid_query', 'search_unavailable', 'search_busy', 'description_required',
+      'device_required', 'gps_required', 'gps_inaccurate', 'too_far', 'own_report', 'vote_not_allowed', 'invalid_vote'].map((e) => `error.${e}`),
     ...['0', '1', '2', '3', '5', '6', '7'].map((p) => `weather.precipType.${p}`),
   ];
   for (const [code, dict] of Object.entries(locales)) {

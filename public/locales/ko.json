@@ -31,7 +31,12 @@
     "manualLocation": "직접 선택한 위치",
     "gpsLocation": "GPS 위치 (정확도 약 {accuracy})",
     "weatherTitle": "현재 날씨",
-    "goDashboard": "위험도 확인하기"
+    "goDashboard": "위험도 자세히 보기",
+    "moreGuides": "행동요령 더 보기",
+    "reportsTitle": "주변 시민 제보",
+    "reportsNone": "반경 {radius} 안에 시민 제보가 없습니다.",
+    "reportsSummary": "반경 {radius} 안 시민 제보: 확인됨 {confirmed}건 · 확인 대기 {pending}건",
+    "reportsNote": "시민 제보는 참고 정보이며 위험도 판단에는 반영하지 않습니다(공식 근거만 사용)."
   },
   "weather": {
     "temperature": "기온",
@@ -53,8 +58,6 @@
     "sheltersFiltered": "{hazard} 상황에 맞지 않는 대피소는 숨겼습니다",
     "noShelters": "20km 안에 등록된 대피소가 없습니다. 대피소 데이터를 추가하세요.",
     "showOnMap": "지도에서 보기",
-    "nearbyReports_one": "반경 {radius} 안에 시민 제보 {count}건",
-    "nearbyReports_other": "반경 {radius} 안에 시민 제보 {count}건",
     "simulateLabel": "시연용 재난 시뮬레이션",
     "simulateOff": "사용 안 함 (실제 데이터)",
     "needLocation": "먼저 홈에서 위치를 설정하세요."
@@ -73,12 +76,14 @@
     "reason": {
       "warning": "{hazard} {level} 발효 중",
       "warningPartial": "{hazard} {level} 발효 중 (시·도 일부 지역: {detail})",
-      "earthquake": "{distance} 거리에서 규모 {magnitude} 지진 발생",
-      "reports": "반경 {radius} 안에 시민 위험 제보 {count}건",
-      "heavyRainNow": "현재 시간당 {mm}mm의 강한 비",
-      "hot": "현재 기온 {c}°C — 폭염 수준",
-      "cold": "현재 기온 {c}°C — 한파 수준",
-      "none": "위험 요인 없음"
+      "earthquake": "규모 {magnitude} 지진 — 내 시·도 진도 {intensity}",
+      "veryHeavyRain": "현재 시간당 {mm}mm의 매우 강한 비",
+      "none": "공식 근거상 위험 요인 없음"
+    },
+    "basis": {
+      "kma_warning": "근거: 기상청 기상특보 (경보 → 위험, 주의보 → 주의)",
+      "quake_alert": "근거: 지진재난문자 발송 기준 (진도 Ⅲ 이상 긴급재난문자 → 위험, 진도 Ⅱ 안전안내문자 → 주의)",
+      "kma_rain_term": "근거: 기상청 예보용어 '매우 강한 비' (시간당 30mm 이상)"
     }
   },
   "level": {
@@ -104,7 +109,10 @@
     "capacity": "수용 {count}명",
     "underground": "지하",
     "sample": "샘플",
-    "distance": "{distance}"
+    "distance": "{distance}",
+    "source": "출처: {source}",
+    "sourceDate": "출처: {source} · {date} 기준",
+    "sampleSource": "샘플(가상) 데이터 — 실제 대피소가 아닙니다"
   },
   "hazard": {
     "heavy_rain": {
@@ -219,11 +227,12 @@
     "legendTitle": "범례",
     "legendToggle": "범례 접기/펼치기",
     "legendQuake": "지진 (원 크기 = 규모)",
-    "legendReport": "시민 위험 제보",
+    "legendReportPending": "시민 제보 (확인 대기)",
+    "legendReportConfirmed": "시민 제보 (확인됨)",
     "legendShelter": "대피소",
     "legendHint": "색칠된 시·도와 이름표를 누르면 발효 중인 특보를 볼 수 있습니다.",
     "partial": "(일부)",
-    "reportButton": "위험 요소 제보하기",
+    "reportButton": "시민 제보",
     "pickReportHint": "제보할 위치를 지도에서 누르세요",
     "pickLocationHint": "내 위치를 지도에서 누르세요",
     "cancel": "취소",
@@ -254,8 +263,18 @@
     "success": "제보가 등록되어 다른 사용자에게도 표시됩니다.",
     "resolve": "해결됐어요",
     "resolveVotes": "해결 확인 {votes}/{threshold}",
-    "resolveDone": "확인해 주셔서 감사합니다.",
-    "expiresNote": "제보는 {hours}시간 후 자동으로 사라집니다.",
+    "resolveDone": "해결 확인해 주셔서 감사합니다.",
+    "confirm": "나도 봤어요",
+    "confirmVotes": "확인 {votes}/{threshold} · {minutes}분 남음",
+    "confirmDone": "확인해 주셔서 감사합니다.",
+    "promoted": "확인이 모여 정식 제보가 되었습니다.",
+    "statusPending": "확인 대기",
+    "statusConfirmed": "확인됨",
+    "mine": "내가 올린 제보입니다. 다른 사람의 확인을 기다리는 중입니다.",
+    "needGps": "시민 제보와 확인은 '현재 위치 사용'(GPS)을 켠 경우에만 할 수 있습니다.",
+    "gpsInaccurate": "GPS 정확도가 낮습니다(약 {accuracy}). {max} 이내일 때 제보·확인할 수 있습니다.",
+    "tooFar": "내 GPS 위치에서 반경 {radius} 안의 지점만 제보·확인할 수 있습니다.",
+    "expiresNote": "제보는 '확인 대기'로 시작합니다. {minutes}분 안에 다른 기기 {threshold}대가 '나도 봤어요'를 누르면 정식 제보가 되고, 아니면 사라집니다. 제보와 확인은 GPS 위치에서 반경 {radius} 안에서만 할 수 있습니다.",
     "newToast": "새 위험 제보: {category}"
   },
   "quake": {
@@ -294,6 +313,13 @@
     "invalid_category": "제보 종류를 선택하세요.",
     "description_too_long": "설명은 {max}자 이하로 입력하세요.",
     "description_required": "'기타' 제보는 어떤 위험인지 설명을 꼭 적어야 합니다.",
+    "device_required": "기기 정보를 확인할 수 없습니다. 페이지를 새로고침하세요.",
+    "gps_required": "GPS 위치가 필요합니다. '현재 위치 사용'을 켜세요.",
+    "gps_inaccurate": "GPS 정확도가 낮습니다. 정확도 {maxAccuracyM}m 이내에서 다시 시도하세요.",
+    "too_far": "내 GPS 위치에서 {radiusM}m 안의 지점만 제보·확인할 수 있습니다.",
+    "own_report": "내가 올린 제보는 직접 확인할 수 없습니다.",
+    "vote_not_allowed": "지금 상태의 제보에는 이 투표를 할 수 없습니다.",
+    "invalid_vote": "잘못된 투표입니다.",
     "rate_limited": "제보가 너무 많습니다. {retryAfterSec}초 후 다시 시도하세요.",
     "not_found": "대상을 찾을 수 없습니다.",
     "invalid_bbox": "지도 범위가 올바르지 않습니다.",

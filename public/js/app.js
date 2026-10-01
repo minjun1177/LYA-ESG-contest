@@ -164,6 +164,9 @@ function renderWeather() {
   if (w.observedAt) box.append(el('p', 'muted small', t('weather.observedAt', { time: formatTime(w.observedAt) })));
 }
 
+// 진도 숫자 → 로마 숫자 표기 (기상청 표기법, 번역 대상 아님)
+const ROMAN = ['', 'Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ', 'Ⅴ', 'Ⅵ', 'Ⅶ', 'Ⅷ', 'Ⅸ', 'Ⅹ', 'Ⅺ', 'Ⅻ'];
+
 function reasonText(reason) {
   const p = reason.params;
   switch (reason.code) {
@@ -172,68 +175,111 @@ function reasonText(reason) {
         ? t('risk.reason.warningPartial', { hazard: t(`hazard.${p.hazard}.name`), level: t(`level.${p.level}`), detail: p.detail })
         : t('risk.reason.warning', { hazard: t(`hazard.${p.hazard}.name`), level: t(`level.${p.level}`) });
     case 'earthquake':
-      return t('risk.reason.earthquake', { magnitude: p.magnitude, distance: formatDistance(p.distanceKm * 1000) });
-    case 'reports':
-      return t('risk.reason.reports', { count: p.count, radius: formatDistance(p.radiusM) });
+      return t('risk.reason.earthquake', { magnitude: p.magnitude, intensity: ROMAN[p.intensity] ?? p.intensity });
     default:
       return t(`risk.reason.${reason.code}`, p);
   }
+}
+
+/** 판단 근거 한 줄 + 그 근거의 공식 출처 */
+function reasonItem(reason, detailByHazard = {}) {
+  const enriched = reason.code === 'warning'
+    ? { ...reason, params: { ...reason.params, detail: detailByHazard[reason.params.hazard] } }
+    : reason;
+  const li = el('li', null, reasonText(enriched));
+  if (reason.basis) li.append(el('span', 'basis', t(`risk.basis.${reason.basis}`)));
+  return li;
+}
+
+/** 대피소 목록 한 줄 (홈·위험도 화면 공용) */
+function shelterItem(sh) {
+  const li = el('li');
+  const info = el('div');
+  const name = el('div', 'shelter-name', sh.name);
+  if (sh.sample) name.append(el('span', 'badge sample', t('shelter.sample')));
+  const meta = [formatDistance(sh.distanceM), t(`shelter.type.${sh.type}`)];
+  if (sh.capacity) meta.push(t('shelter.capacity', { count: formatNumber(sh.capacity) }));
+  info.append(name, el('div', 'shelter-meta', meta.join(' · ')));
+  const btn = el('button', 'btn small', t('dashboard.showOnMap'));
+  btn.type = 'button';
+  btn.addEventListener('click', () => {
+    showTab('map');
+    mapView.focusShelter(sh.id);
+  });
+  li.append(info, btn);
+  return li;
+}
+
+function shelterNote(s) {
+  const first = s.risk.hazards[0];
+  if (s.shelterFallback) return t('dashboard.sheltersFallback', { hazard: t(`hazard.${first}.name`) });
+  if (first) return t('dashboard.sheltersFiltered', { hazard: t(`hazard.${first}.name`) });
+  return '';
+}
+
+/** 주변 시민 제보 요약 — 공식 근거가 아니어서 위험도에는 반영하지 않는다 */
+function reportsSummary(s) {
+  const radius = formatDistance(state.config.reportRadiusM);
+  const confirmed = s.nearbyReports.filter((r) => r.status === 'confirmed').length;
+  const pending = s.nearbyReports.length - confirmed;
+  return s.nearbyReports.length === 0
+    ? t('home.reportsNone', { radius })
+    : t('home.reportsSummary', { radius, confirmed, pending });
+}
+
+/** 홈: 지금 필요한 정보만 요약해서 보여준다 */
+function renderHome() {
+  const s = state.situation;
+  for (const id of ['home-risk', 'home-shelters', 'home-guides', 'home-reports']) $(id).hidden = !s;
+  if (!s) return;
+  const { level, reasons, hazards } = s.risk;
+  $('home-risk-dot').className = `dot ${level}`;
+  $('home-risk-label').textContent = t(`risk.level.${level}`);
+  const detailByHazard = Object.fromEntries(s.warnings.map((w) => [w.hazard, w.detail]));
+  $('home-risk-reasons').replaceChildren(...reasons.map((r) => reasonItem(r, detailByHazard)));
+
+  $('home-shelters-note').textContent = shelterNote(s);
+  $('home-shelter-list').replaceChildren(...(s.shelters.length === 0
+    ? [el('li', 'muted', t('dashboard.noShelters'))]
+    : s.shelters.slice(0, 2).map(shelterItem)));
+
+  // 행동요령: 지금 재난마다 앞의 3가지
+  const body = $('home-guide-body');
+  body.replaceChildren();
+  if (hazards.length === 0) body.append(el('p', 'muted', t('actions.noCurrent')));
+  for (const code of hazards) {
+    body.append(el('h3', 'guide-title', t(`hazard.${code}.name`)));
+    const steps = t(`hazard.${code}.guide`);
+    const ol = el('ol', 'guide-steps');
+    (Array.isArray(steps) ? steps.slice(0, 3) : []).forEach((step) => ol.append(el('li', null, step)));
+    body.append(ol);
+  }
+
+  $('home-reports-text').textContent = reportsSummary(s);
 }
 
 function renderDashboard() {
   const s = state.situation;
   $('dashboard-empty').hidden = Boolean(s);
   $('dashboard-content').hidden = !s;
-  $('home-risk').hidden = !s;
   if (!s) return;
 
-  const { level, reasons, hazards } = s.risk;
+  const { level, reasons } = s.risk;
   $('signal').dataset.level = level;
   $('signal').setAttribute('aria-label', t(`risk.level.${level}`));
   $('risk-level').textContent = t(`risk.level.${level}`);
   $('risk-level').className = `risk-level ${level}`;
   $('risk-desc').textContent = t(`risk.levelDesc.${level}`);
-  $('home-risk-dot').className = `dot ${level}`;
-  $('home-risk-label').textContent = t(`risk.level.${level}`);
 
   // 특보의 세부 지역(detail)은 reasons 에 없으므로 warnings 에서 보충
   const detailByHazard = Object.fromEntries(s.warnings.map((w) => [w.hazard, w.detail]));
-  $('risk-reasons').replaceChildren(...reasons.map((r) => {
-    const enriched = r.code === 'warning' ? { ...r, params: { ...r.params, detail: detailByHazard[r.params.hazard] } } : r;
-    return el('li', null, reasonText(enriched));
-  }));
+  $('risk-reasons').replaceChildren(...reasons.map((r) => reasonItem(r, detailByHazard)));
 
-  $('nearby-reports').textContent = s.nearbyReports.length > 0
-    ? t('dashboard.nearbyReports', { count: s.nearbyReports.length, radius: formatDistance(state.config.riskRules.reportRadiusM) })
-    : '';
-
-  let note = '';
-  if (s.shelterFallback) note = t('dashboard.sheltersFallback', { hazard: t(`hazard.${hazards[0]}.name`) });
-  else if (hazards.length > 0) note = t('dashboard.sheltersFiltered', { hazard: t(`hazard.${hazards[0]}.name`) });
-  $('shelters-note').textContent = note;
-
-  const list = $('shelter-list');
-  if (s.shelters.length === 0) {
-    list.replaceChildren(el('li', 'muted', t('dashboard.noShelters')));
-  } else {
-    list.replaceChildren(...s.shelters.map((sh) => {
-      const li = el('li');
-      const info = el('div');
-      const name = el('div', 'shelter-name', sh.name);
-      if (sh.sample) name.append(el('span', 'badge sample', t('shelter.sample')));
-      const meta = [formatDistance(sh.distanceM), t(`shelter.type.${sh.type}`)];
-      if (sh.capacity) meta.push(t('shelter.capacity', { count: formatNumber(sh.capacity) }));
-      info.append(name, el('div', 'shelter-meta', meta.join(' · ')));
-      const btn = el('button', 'btn small', t('dashboard.showOnMap'));
-      btn.type = 'button';
-      btn.addEventListener('click', () => {
-        showTab('map');
-        mapView.focusShelter(sh.id);
-      });
-      li.append(info, btn);
-      return li;
-    }));
-  }
+  $('nearby-reports').textContent = `${reportsSummary(s)} ${t('home.reportsNote')}`;
+  $('shelters-note').textContent = shelterNote(s);
+  $('shelter-list').replaceChildren(...(s.shelters.length === 0
+    ? [el('li', 'muted', t('dashboard.noShelters'))]
+    : s.shelters.map(shelterItem)));
 }
 
 function renderSimulateSelect() {
@@ -281,7 +327,11 @@ function renderReportDialogText() {
   if (prev) select.value = prev;
   $('report-description').maxLength = cfg.reportDescriptionMax;
   renderDescriptionRequirement();
-  $('report-expires').textContent = t('report.expiresNote', { hours: cfg.reportTtlHours });
+  $('report-expires').textContent = t('report.expiresNote', {
+    minutes: cfg.reportPendingMinutes,
+    threshold: cfg.reportConfirmThreshold,
+    radius: formatDistance(cfg.reportRadiusM),
+  });
 }
 
 function renderEmergencyText() {
@@ -301,6 +351,7 @@ function renderAll() {
   renderBanner();
   renderLocation();
   renderWeather();
+  renderHome();
   renderDashboard();
   renderGuides();
   renderSimulateSelect();
@@ -408,6 +459,44 @@ function startGps() {
 }
 
 // ---------------------------------------------------------------- 제보
+// 제보·확인 투표는 GPS 위치가 있고 정확도가 기준 이내인 사용자만 (서버에서도 다시 검사)
+function gpsFix() {
+  const loc = state.location;
+  if (!loc || loc.manual || !Number.isFinite(loc.accuracy)) return null;
+  return { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy };
+}
+
+/** GPS 조건을 만족하지 않으면 이유를 알려주고 false */
+function checkGps(target) {
+  const gps = gpsFix();
+  const cfg = state.config;
+  if (!gps) {
+    toast(t('report.needGps'));
+    return null;
+  }
+  if (gps.accuracy > cfg.reportGpsMaxAccuracyM) {
+    toast(t('report.gpsInaccurate', { accuracy: formatDistance(gps.accuracy), max: formatDistance(cfg.reportGpsMaxAccuracyM) }));
+    return null;
+  }
+  if (target && distanceM(gps, target) > cfg.reportRadiusM) {
+    toast(t('report.tooFar', { radius: formatDistance(cfg.reportRadiusM) }));
+    return null;
+  }
+  return gps;
+}
+
+function startReport() {
+  if (checkGps()) mapView.startPick('report');
+}
+
+// 내가 올린 제보 (내 제보에는 '나도 봤어요'를 누를 수 없다) — 브라우저에 기억
+const OWN_REPORTS_KEY = 'myReports';
+const ownReports = new Set(storage('get', OWN_REPORTS_KEY) ?? []);
+function rememberOwnReport(id) {
+  ownReports.add(id);
+  storage('set', OWN_REPORTS_KEY, [...ownReports].slice(-100));
+}
+
 const descriptionRequired = () => state.config.reportDescriptionRequired.includes($('report-category').value);
 
 // '기타' 처럼 설명이 필수인 종류를 고르면 라벨과 입력 안내를 바꾼다
@@ -427,6 +516,7 @@ function fitDescriptionHeight() {
 }
 
 function openReportDialog(latlng) {
+  if (!checkGps(latlng)) return;
   state.pendingReport = latlng;
   $('report-error').hidden = true;
   $('report-description').value = '';
@@ -444,6 +534,8 @@ async function submitReport(event) {
     $('report-description').focus();
     return;
   }
+  const gps = checkGps(state.pendingReport);
+  if (!gps) return;
   const btn = $('btn-report-submit');
   btn.disabled = true;
   try {
@@ -451,9 +543,10 @@ async function submitReport(event) {
       ...state.pendingReport,
       category: $('report-category').value,
       description: $('report-description').value,
+      gps,
     });
+    rememberOwnReport(report.id);
     mapView.upsertReport(report);
-    ownReports.add(report.id);
     $('report-dialog').close();
     toast(t('report.success'));
     scheduleRefresh();
@@ -465,12 +558,15 @@ async function submitReport(event) {
   }
 }
 
-async function resolveReport(id) {
+// kind: 'confirm' = 나도 봤어요(확인 대기 제보), 'resolve' = 해결됐어요(확인된 제보)
+async function voteReport(report, kind) {
+  const gps = checkGps(report);
+  if (!gps) return;
   try {
-    const { report, removed } = await api.resolveReport(id);
-    if (removed) mapView.removeReport(id);
-    else mapView.upsertReport(report);
-    toast(t('report.resolveDone'));
+    const { report: updated, removed, confirmed } = await api.voteReport(report.id, kind, gps);
+    if (removed) mapView.removeReport(report.id);
+    else mapView.upsertReport(updated);
+    toast(t(confirmed ? 'report.promoted' : kind === 'confirm' ? 'report.confirmDone' : 'report.resolveDone'));
     scheduleRefresh();
   } catch (err) {
     toast(errorMessage(err));
@@ -478,7 +574,6 @@ async function resolveReport(id) {
 }
 
 // ---------------------------------------------------------------- 실시간(SSE)
-const ownReports = new Set();
 function connectEvents() {
   const source = new EventSource('/api/events');
   source.addEventListener('report:new', (e) => {
@@ -625,7 +720,12 @@ function bindEvents() {
     renderBanner();
     refreshSituation();
   });
-  $('btn-report').addEventListener('click', () => mapView.startPick('report'));
+  $('btn-report').addEventListener('click', startReport);
+  $('btn-go-actions').addEventListener('click', () => showTab('actions'));
+  $('btn-go-map').addEventListener('click', () => {
+    showTab('map');
+    mapView.showUserArea();
+  });
   $('report-form').addEventListener('submit', submitReport);
   $('report-description').addEventListener('input', fitDescriptionHeight);
   $('report-category').addEventListener('change', () => {
@@ -696,7 +796,8 @@ async function main() {
   mapView = createMapView({
     api,
     getConfig: () => state.config,
-    onResolveReport: resolveReport,
+    onVoteReport: voteReport,
+    isOwnReport: (id) => ownReports.has(id),
     onPick: (mode, latlng) => {
       if (mode === 'report') openReportDialog(latlng);
       else setManualLocation(latlng);

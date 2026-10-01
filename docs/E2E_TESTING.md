@@ -105,23 +105,28 @@ Province polygons have popups; Leaflet's popup handler stops map clicks. Picking
 ### S5 — Risk + evacuation popup (sample data)
 1. With Seoul location set, wait for `dialog#emergency[open]`.
 2. **Expected:** reason mentions heavy rain warning; nearest shelter named; `#btn-emg-shelter` → map tab, numbered blue marker popup open.
-3. Dashboard: `#signal[data-level="danger"]`; shelter list has **no** `민방위 대피시설` (underground excluded for heavy rain).
-4. Close the popup → it must **not** reappear until the situation changes.
+3. Dashboard: `#signal[data-level="danger"]`; every `#risk-reasons li` carries a `.basis` line naming its official source (e.g. "근거: 기상청 기상특보"); no reason is based on citizen reports; shelter list has **no** `민방위 대피시설`.
+4. Open a shelter popup → **Expected:** a source line — "출처: … · YYYY-MM-DD 기준" for real data, "샘플(가상) 데이터" for sample data.
+5. Close the evacuation popup → it must **not** reappear until the situation changes.
 
 ### S6 — Simulation
 1. Dashboard → `#simulate-select` = `earthquake`.
 2. **Expected:** banner switches to the simulated style; every listed shelter is an earthquake site (outdoor site or earthquake-ready housing) and none is underground — **or**, if the data has no earthquake sites nearby (real-data servers), `#shelters-note` shows the "no matching shelter data, showing nearest above-ground shelters" notice; `#view-actions` shows the earthquake guide under "current".
 3. Set back to off → banner returns to sample.
 
-### S7 — Reports + real-time sharing (two contexts)
-1. Open context **A** and **B** on `/#map`.
-2. A: `#btn-report` → click map → category `flooding`, description `e2e test` → submit.
-3. **Expected (A):** success toast, `.report-marker` added. **(B)** within 3 s: toast "new hazard report", marker added (SSE).
-4. B: open the marker popup → "resolved" button → votes `1/3`.
-5. Type 201 chars into `#report-description` → **Expected:** the field stops at **200** (`maxlength`). Close the dialog **without submitting** (a 200-char report is valid and would be saved).
-6. Server-side limit: `POST /api/reports` directly (Playwright `request`) with a 201-char description → **Expected:** HTTP 400 `{ "error": "description_too_long", "max": 200 }`.
-7. "Other" needs a description: open the report dialog, choose category `other` → **Expected:** label switches to "required"; submitting with an empty or spaces-only description shows `#report-error` and **sends no request**. Close the dialog without submitting. Direct `POST` with `category: "other"` and no description → HTTP 400 `{ "error": "description_required" }`.
-8. Long and multi-line text (mobile **and** desktop): type 60 chars with **no spaces** plus two lines separated by Enter into `#report-description`.
+### S7 — Citizen reports: GPS only, confirmation by other devices, real-time sharing
+Each browser **context** has its own storage, so it is a separate device (its own random device ID). Give contexts **A–D** geolocation at Seoul City Hall and turn GPS on (`#btn-gps`); context **E** picks its location on the map instead (no GPS).
+1. E: `#btn-report` → **Expected:** toast "GPS required", no pick hint. Report and vote buttons never work without GPS.
+2. A: `#btn-mylocation`, `#btn-report`, click the map centre → category `flooding`, description `e2e test` → submit. **Expected (A):** success toast, a **yellow** `.report-marker.pending`; its popup shows "awaiting confirmation 0/3 · N min left" and says it is A's own report (no confirm button).
+3. **Expected (B, C, D)** within 3 s: "new report" toast and the yellow marker (SSE).
+4. B, C, D each open the popup → "I saw it too" (`report.confirm`). **Expected:** counts 1/3, 2/3; after D: toast "now a confirmed report", and the marker turns **red** (`.report-marker.confirmed`) in **all** contexts.
+5. A: start a report, then click a point more than 1 km from A's GPS position → **Expected:** toast "only within 1 km", no dialog.
+6. B, C, D: "It's resolved" on the red marker → **Expected:** after the third vote the marker disappears everywhere.
+7. Home and Risk tabs: the citizen-report summary updates, and the **risk level does not change** because of reports.
+8. Type 201 chars into `#report-description` → **Expected:** the field stops at **200** (`maxlength`). Close the dialog **without submitting** (a 200-char report is valid and would be saved).
+9. Server-side limit: `POST /api/reports` directly (Playwright `request`) with a 201-char description → **Expected:** HTTP 400 `{ "error": "description_too_long", "max": 200 }`.
+10. "Other" needs a description: open the report dialog, choose category `other` → **Expected:** label switches to "required"; submitting with an empty or spaces-only description shows `#report-error` and **sends no request**. Close the dialog without submitting. Direct `POST` with `category: "other"` and no description → HTTP 400 `{ "error": "description_required" }`.
+11. Long and multi-line text (mobile **and** desktop): type 60 chars with **no spaces** plus two lines separated by Enter into `#report-description`.
    **Expected:** the textarea grows in height as you type, never gets wider than the dialog (only a vertical resize handle), and the dialog scrolls instead of overflowing the screen.
    Submit, open the new report's popup → **Expected:** the text wraps inside the popup (no horizontal overflow of `.report-desc`) and both lines appear on separate lines.
 
@@ -146,9 +151,14 @@ Province polygons have popups; Leaflet's popup handler stops map clicks. Picking
 ### S12 — Map legend and hazard labels
 1. Map view → **Expected:** every coloured province shows a `.hazard-label` naming the hazard and level (sample data: Seoul "호우 경보", Daegu "폭염 주의보", Gyeonggi "호우 경보 (일부)"); each earthquake circle shows "지진 M…".
 2. Click `.legend-toggle` → **Expected:** `.legend-body` hidden, `aria-expanded="false"`; reload → still collapsed; click again → rows visible.
-3. Legend rows include warning, advisory, no alert, earthquake, citizen report, shelter, recommended shelter.
+3. Legend rows include warning, advisory, no alert, earthquake, citizen report (awaiting confirmation, yellow), citizen report (confirmed, red), shelter, recommended shelter.
 4. Switch to English → labels read e.g. "Heavy rain warning", "M3.1 quake"; legend is English.
 5. Pick mode (S3) still works when clicking on a label.
+
+### S13 — Home shows everything needed now
+1. Set a location (GPS or "Pick on map"). **Expected on Home, in order:** location → `#home-risk` (level + reasons with `.basis`) → weather → `#home-shelters` (at most 2, with "show on map") → `#home-reports` (confirmed / awaiting counts within 1 km and the "reference only" note) → `#home-guides` (first 3 steps per current hazard, or "no current disaster").
+2. Simulation `heavy_rain` (Risk tab) → back to Home → **Expected:** risk card danger, heavy-rain guide steps, shelters exclude underground ones.
+3. Buttons: "Risk details" → Risk tab, "More safety guides" → What to do, "Show on map" (reports) → map.
 
 ### S11 — Failure states
 1. Block `**/api/situation*` (route → abort) and set a location → **Expected:** toast with the network error, UI stays usable.

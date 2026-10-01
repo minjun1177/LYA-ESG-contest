@@ -9,7 +9,20 @@ export const COLUMN_CANDIDATES = {
   lng: ['경도', '경도(EPSG4326)', '경도(WGS84)', 'lng', 'lon', 'longitude', 'LOT', 'x좌표(경도)'],
   address: ['도로명전체주소', '도로명주소', '소재지도로명주소', '소재지주소', '상세주소', '주소', '소재지지번주소', '지번주소', 'address'],
   capacity: ['최대수용인원', '수용인원', '이용가능인원', '수용가능인원', '대피가능인원', 'capacity'],
+  date: ['데이터기준일자', '데이터기준일', '기준일자', '기준일'],
 };
+
+/** '2026-06-08', '2026.06.08', '20260608' → '2026-06-08' (해석 못 하면 '') */
+export function normalizeDate(value) {
+  const m = String(value ?? '').match(/(\d{4})[-./]?(\d{2})[-./]?(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+}
+
+/** 파일명에 붙은 기준일 (예: '서울특별시 금천구_무더위쉼터현황_20260608.csv') */
+export function dateFromFilename(filename) {
+  const m = String(filename ?? '').match(/(20\d{2})(\d{2})(\d{2})(?!\d)/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+}
 
 export function findColumn(headers, candidates) {
   const normalized = headers.map((h) => h.replace(/\s+/g, ''));
@@ -27,10 +40,11 @@ export function findColumn(headers, candidates) {
 
 /**
  * @param {Array<object>} rows parseCsvObjects 결과
- * @param {{ type: string, underground?: 'auto'|'yes'|'no' }} options
+ * @param {{ type: string, underground?: 'auto'|'yes'|'no', source?: string, fallbackDate?: string }} options
+ *   source: 화면에 표시할 출처(데이터셋 이름), fallbackDate: 행에 기준일이 없을 때 쓸 날짜(파일명 등)
  * @returns {{ shelters: Array<object>, skipped: number, swapped: number, columns: object }}
  */
-export function convertShelterRows(rows, { type, underground = 'auto' }) {
+export function convertShelterRows(rows, { type, underground = 'auto', source = '', fallbackDate = '' }) {
   if (rows.length === 0) throw new Error('the CSV has no data rows');
   const headers = Object.keys(rows[0]);
   const columns = Object.fromEntries(Object.entries(COLUMN_CANDIDATES).map(([k, c]) => [k, findColumn(headers, c)]));
@@ -67,6 +81,8 @@ export function convertShelterRows(rows, { type, underground = 'auto' }) {
       capacity: columns.capacity ? String(row[columns.capacity]).replace(/[^\d]/g, '') : '',
       underground: isUnderground ? 1 : 0,
       sample: 0,
+      source,
+      date: (columns.date && normalizeDate(row[columns.date])) || normalizeDate(fallbackDate),
     });
   }
   return { shelters, skipped, swapped, columns };

@@ -158,6 +158,8 @@ export class KmaService {
             depthKm: Number.parseFloat(it.dep) || null,
             intensity: it.inT || '',
             location: it.loc || '',
+            // 통보 종류: 2 국외지진정보, 12 국외지진조기경보 → 국내 위험도에서 제외
+            domestic: ![2, 12].includes(Number(it.fcTp)),
           }))
           .filter((q) => q.time && Number.isFinite(q.lat) && Number.isFinite(q.lng) && Number.isFinite(q.magnitude))
           // 한반도 주변만

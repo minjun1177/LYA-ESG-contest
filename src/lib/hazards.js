@@ -18,7 +18,8 @@ export const HAZARDS = {
   typhoon: { shelterTypes: ['temporary_housing', 'earthquake_indoor'], excludeUnderground: true, land: true },
   storm_surge: { shelterTypes: ['temporary_housing', 'earthquake_indoor'], excludeUnderground: true, land: true },
   tsunami: { shelterTypes: ['temporary_housing', 'earthquake_indoor'], excludeUnderground: true, land: true },
-  strong_wind: { shelterTypes: ['temporary_housing', 'earthquake_indoor', 'civil_defense'], excludeUnderground: false, land: true },
+  // 민방위 대피시설은 민방위사태(전시·공습)용 지하시설이라 자연재해 대피소로 추천하지 않는다
+  strong_wind: { shelterTypes: ['temporary_housing', 'earthquake_indoor'], excludeUnderground: false, land: true },
   heavy_snow: { shelterTypes: ['cold', 'temporary_housing'], excludeUnderground: false, land: true },
   cold_wave: { shelterTypes: ['cold', 'temporary_housing'], excludeUnderground: false, land: true },
   heat_wave: { shelterTypes: ['heat'], excludeUnderground: false, land: true },

@@ -15,7 +15,8 @@ const kma = new KmaService({ serviceKey: config.dataGoKrKey, cacheMinutes: confi
 const shelters = loadShelters(config.sheltersDir);
 const reportStore = new ReportStore({
   dbPath: config.dbPath,
-  ttlHours: config.reportTtlHours,
+  pendingMinutes: config.reportPendingMinutes,
+  confirmThreshold: config.reportConfirmThreshold,
   resolveThreshold: config.reportResolveThreshold,
 });
 const events = new EventHub();

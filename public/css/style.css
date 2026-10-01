@@ -110,9 +110,15 @@ main { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
 #risk-desc { text-align: center; }
 .reasons { margin: 0; padding-left: 18px; }
 .reasons li { margin: 4px 0; }
+/* 판단 근거의 공식 출처 */
+.reasons .basis { display: block; font-size: 0.75rem; color: var(--muted); }
 
-.risk-mini { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.risk-mini-body { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+.home-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.home-risk-label { font-size: 1.3rem; }
+#view-home .card > .btn.small { margin-top: 8px; }
+.guide-title { margin: 10px 0 2px; font-size: 0.95rem; color: var(--text); }
+.guide-steps { margin: 0; padding-left: 20px; font-size: 0.9rem; }
+.guide-steps li { margin: 3px 0; }
 .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--off); }
 .dot.danger { background: var(--danger); }
 .dot.caution { background: var(--caution); }
@@ -132,6 +138,8 @@ main { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
   color: var(--muted); margin-left: 4px; vertical-align: middle;
 }
 .badge.sample { background: #fef3c7; color: #92400e; }
+.badge.pending { background: #fef9c3; color: #854d0e; }
+.badge.confirmed { background: #fee2e2; color: #991b1b; }
 
 /* ---------- 지도 ---------- */
 .view-map { position: absolute; inset: 0; padding: 0; max-width: none; margin: 0; }
@@ -204,6 +212,9 @@ main { flex: 1; min-height: 0; overflow-y: auto; position: relative; }
   width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   background: var(--danger); border: 2px solid #fff; box-shadow: 0 2px 6px rgb(0 0 0 / 35%);
 }
+/* 확인 대기 제보: 노란색·반투명 / 확인된 제보: 빨간색 */
+.report-marker.pending { background: #eab308; opacity: 0.85; }
+.report-marker.pending span { color: #422006; }
 .report-marker span { display: block; transform: rotate(45deg); color: #fff; font-weight: 800; text-align: center; line-height: 24px; font-size: 14px; }
 
 /* ---------- 행동요령 ---------- */

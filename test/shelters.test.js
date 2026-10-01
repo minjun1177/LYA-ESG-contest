@@ -48,6 +48,22 @@ test('falls back to any above-ground shelter when no policy match exists', () =>
   assert.equal(matchShelters(shelters, origin, ['heavy_rain']).fallback, false);
 });
 
+test('a hazard fallback never offers civil defense shelters (wartime facilities)', () => {
+  const onlyBunkerAbove = [make('bunker', 'civil_defense', 0.001), make('warm', 'cold', 0.003)];
+  const result = matchShelters(onlyBunkerAbove, origin, ['strong_wind']);
+  assert.deepEqual(result.shelters.map((s) => s.id), ['warm']);
+  assert.equal(result.fallback, true);
+  // 재난이 없을 때의 '가까운 대피소'에는 포함될 수 있다
+  assert.equal(matchShelters(onlyBunkerAbove, origin, []).shelters[0].id, 'bunker');
+});
+
+test('normalizeShelter keeps source and a valid reference date', () => {
+  const s = normalizeShelter({ name: 'x', type: 'heat', lat: '37.5', lng: '127', source: '중구청', date: '2026-06-08' }, 0, 'f');
+  assert.equal(s.source, '중구청');
+  assert.equal(s.date, '2026-06-08');
+  assert.equal(normalizeShelter({ name: 'x', type: 'heat', lat: '37.5', lng: '127', date: '6/8' }, 0, 'f').date, '');
+});
+
 test('normalizeShelter rejects invalid rows', () => {
   assert.equal(normalizeShelter({ name: 'x', type: 'nope', lat: '37', lng: '127' }, 0, 's'), null);
   assert.equal(normalizeShelter({ name: 'x', type: 'heat', lat: '0', lng: '0' }, 0, 's'), null);

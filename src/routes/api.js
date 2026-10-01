@@ -3,7 +3,9 @@ import { isInKorea, isValidLatLng, distanceMeters } from '../lib/geo.js';
 import { HAZARDS, HAZARD_CODES, SHELTER_TYPES } from '../lib/hazards.js';
 import { findProvince, loadProvinces } from '../lib/provinces.js';
 import { RateLimiter } from '../lib/rateLimit.js';
-import { REPORT_CATEGORIES, REPORT_CATEGORIES_REQUIRING_DESCRIPTION, REPORT_DESCRIPTION_MAX } from '../lib/reportStore.js';
+import {
+  CONFIRMED_TTL_HOURS, REPORT_CATEGORIES, REPORT_CATEGORIES_REQUIRING_DESCRIPTION, REPORT_DESCRIPTION_MAX, REPORT_STATUS, VOTE_KINDS,
+} from '../lib/reportStore.js';
 import { assessRisk, RISK_RULES } from '../lib/risk.js';
 import { matchShelters, searchShelters, sheltersInBounds } from '../lib/shelters.js';
 import { GeocoderError } from '../services/geocoder.js';
@@ -42,16 +44,44 @@ function simulatedHazard(value) {
 
 export const SEARCH_QUERY_MAX = 100;
 
+// 브라우저가 만든 무작위 기기 ID (UUID v4). 같은 IP 뒤의 여러 사람을 구분하는 데 쓴다
+const DEVICE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function deviceIdOf(req) {
+  const id = req.get('x-device-id');
+  if (!id || !DEVICE_ID_RE.test(id)) throw new ApiError(400, 'device_required');
+  return id.toLowerCase();
+}
+
+/** 제보·투표는 GPS 위치가 있는 사용자만, 대상 지점 반경 안에서만 할 수 있다 */
+function requireGpsNear(body, target, { radiusM, maxAccuracyM }) {
+  const gps = body?.gps;
+  const lat = Number(gps?.lat);
+  const lng = Number(gps?.lng);
+  const accuracy = Number(gps?.accuracy);
+  if (!gps || !isValidLatLng(lat, lng) || !Number.isFinite(accuracy)) throw new ApiError(403, 'gps_required');
+  if (accuracy > maxAccuracyM) throw new ApiError(403, 'gps_inaccurate', { maxAccuracyM });
+  if (distanceMeters(lat, lng, target.lat, target.lng) > radiusM) throw new ApiError(403, 'too_far', { radiusM });
+}
+
 export function createApiRouter({ config, kma, geocoder, shelters, reportStore, events }) {
   const router = express.Router();
   // 파싱 오류도 아래 오류 처리기에서 코드로 응답하도록 라우터 안에서 등록
   router.use(express.json({ limit: '16kb' }));
   const limiter = new RateLimiter({ limit: config.reportRateLimit, windowMs: config.reportRateWindowMin * 60 * 1000 });
   const searchLimiter = new RateLimiter({ limit: config.searchRateLimit, windowMs: 60 * 1000 });
+  const ipActionLimiter = new RateLimiter({ limit: config.reportIpRateLimit, windowMs: config.reportRateWindowMin * 60 * 1000 });
 
   // minitunnel -H 터널은 실제 방문자 IP를 mt-connection-ip 헤더로 넘겨준다 (외부에서 위조 불가)
   const clientIp = (req) =>
     (config.trustTunnelHeader && req.get('mt-connection-ip')) || req.socket.remoteAddress || 'unknown';
+
+  function takeOrThrow(limiter, key, res) {
+    if (limiter.take(key)) return;
+    const retryAfter = limiter.retryAfterSec(key);
+    res.set('Retry-After', String(retryAfter));
+    throw new ApiError(429, 'rate_limited', { retryAfterSec: retryAfter });
+  }
 
   router.get('/config', (req, res) => {
     res.json({
@@ -61,8 +91,12 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
       reportCategories: REPORT_CATEGORIES,
       reportDescriptionMax: REPORT_DESCRIPTION_MAX,
       reportDescriptionRequired: REPORT_CATEGORIES_REQUIRING_DESCRIPTION,
-      reportTtlHours: config.reportTtlHours,
+      reportPendingMinutes: config.reportPendingMinutes,
+      reportConfirmThreshold: config.reportConfirmThreshold,
       reportResolveThreshold: config.reportResolveThreshold,
+      reportConfirmedTtlHours: CONFIRMED_TTL_HOURS,
+      reportRadiusM: config.reportRadiusM,
+      reportGpsMaxAccuracyM: config.reportGpsMaxAccuracyM,
       riskRules: RISK_RULES,
     });
   });
@@ -103,20 +137,23 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
     // 시뮬레이션 중에는 실제 특보·지진 대신 가상 재난 하나만 적용
     if (simulate === 'earthquake') {
       warnings = [];
-      earthquakes = [{ lat: location.lat + 0.05, lng: location.lng, magnitude: 5.0, time: new Date().toISOString() }];
+      // 내 위치가 진앙, 내 시·도 진도 Ⅳ (긴급재난문자 대상)
+      earthquakes = [{
+        lat: location.lat, lng: location.lng, magnitude: 5.0, intensity: 'Ⅳ', domestic: true, time: new Date().toISOString(),
+      }];
     } else if (simulate) {
       warnings = [{ hazard: simulate, level: 'warning', partial: false }];
       earthquakes = [];
     }
 
-    const reports = reportStore.listActive();
+    // 위험도는 공식 근거(특보·진도·강수강도)만으로 판단 — 시민 제보는 참고 정보로만 함께 보낸다
     const risk = assessRisk({
-      location,
+      province,
       warnings,
       earthquakes,
-      reports,
       weather: weather?.source === 'unavailable' ? null : weather,
     });
+    const reports = reportStore.listActive();
 
     const matched = matchShelters(shelters, location, risk.hazards);
     res.json({
@@ -131,7 +168,7 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
       shelterFallback: matched.fallback,
       nearbyReports: reports
         .map((r) => ({ ...r, distanceM: Math.round(distanceMeters(location.lat, location.lng, r.lat, r.lng)) }))
-        .filter((r) => r.distanceM <= RISK_RULES.reportRadiusM)
+        .filter((r) => r.distanceM <= config.reportRadiusM)
         .sort((a, b) => a.distanceM - b.distanceM),
     });
   });
@@ -188,25 +225,39 @@ export function createApiRouter({ config, kma, geocoder, shelters, reportStore, 
       throw new ApiError(400, 'description_required');
     }
 
-    const ip = clientIp(req);
-    if (!limiter.take(ip)) {
-      const retryAfter = limiter.retryAfterSec(ip);
-      res.set('Retry-After', String(retryAfter));
-      throw new ApiError(429, 'rate_limited', { retryAfterSec: retryAfter });
-    }
+    const device = deviceIdOf(req);
+    requireGpsNear(body, { lat, lng }, { radiusM: config.reportRadiusM, maxAccuracyM: config.reportGpsMaxAccuracyM });
 
-    const report = reportStore.create({ lat, lng, category: body.category, description });
+    // 도배 제한은 기기 단위 (터널 tcp 모드·공유 와이파이에서는 모두 같은 IP로 보이므로)
+    // + 같은 IP 전체의 넉넉한 상한 (기기 ID를 바꿔 가며 피하는 것 방지)
+    takeOrThrow(ipActionLimiter, clientIp(req), res);
+    takeOrThrow(limiter, device, res);
+
+    const report = reportStore.create({ lat, lng, category: body.category, description, reporter: device });
     events.broadcast('report:new', report);
     res.status(201).json({ report });
   });
 
-  router.post('/reports/:id/resolve', (req, res) => {
+  // 투표: confirm = '나도 봤어요'(확인 대기 제보만), resolve = '해결됐어요'(확인된 제보만)
+  router.post('/reports/:id/vote', (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id)) throw new ApiError(404, 'not_found');
-    const { report, removed } = reportStore.voteResolved(id, clientIp(req));
-    if (!report) throw new ApiError(404, 'not_found');
+    const kind = req.body?.kind;
+    if (!VOTE_KINDS.includes(kind)) throw new ApiError(400, 'invalid_vote');
+    const device = deviceIdOf(req);
+
+    const target = reportStore.getInternal(id);
+    if (!target || target.expires_at <= Date.now()) throw new ApiError(404, 'not_found');
+    const allowedStatus = kind === 'confirm' ? REPORT_STATUS.pending : REPORT_STATUS.confirmed;
+    if (target.status !== allowedStatus) throw new ApiError(409, 'vote_not_allowed');
+    // 내 제보를 내가 '확인'해 승격시킬 수는 없다 ('해결됐어요'는 제보자도 가능)
+    if (kind === 'confirm' && target.reporter === device) throw new ApiError(403, 'own_report');
+    requireGpsNear(req.body, target, { radiusM: config.reportRadiusM, maxAccuracyM: config.reportGpsMaxAccuracyM });
+    takeOrThrow(ipActionLimiter, clientIp(req), res);
+
+    const { report, removed, confirmed } = reportStore.vote(id, device, kind);
     events.broadcast(removed ? 'report:removed' : 'report:updated', removed ? { id } : report);
-    res.json({ report, removed });
+    res.json({ report, removed, confirmed });
   });
 
   router.get('/events', events.handler);

@@ -28,5 +28,7 @@ export async function downloadDataGoFile(datasetId, fetchImpl = globalThis.fetch
   const rawName = disposition.match(/filename="?([^";]+)"?/)?.[1];
   const filename = rawName ? Buffer.from(rawName, 'latin1').toString('utf8') : `${datasetId}.csv`;
   if (!/\.csv$/i.test(filename)) throw new DataGoFileError(`not a CSV file: ${filename}`);
-  return { filename, buffer: Buffer.from(await res.arrayBuffer()), sourceUrl: pageUrl };
+  // 데이터셋 페이지의 '수정일' — 행·파일명에 기준일이 없을 때 대신 쓴다
+  const updatedAt = html.match(/<strong class="key">\s*수정일\s*<\/strong>\s*<div class="value">\s*(\d{4}-\d{2}-\d{2})/)?.[1] ?? '';
+  return { filename, buffer: Buffer.from(await res.arrayBuffer()), sourceUrl: pageUrl, updatedAt };
 }

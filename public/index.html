@@ -34,18 +34,43 @@
         </div>
       </article>
 
+      <!-- 홈: 내 위치 → 신호등 → 날씨 → 대피소 → 시민 제보 → 행동요령 -->
+      <article id="home-risk" class="card" hidden>
+        <div class="home-card-head">
+          <span id="home-risk-dot" class="dot"></span>
+          <strong id="home-risk-label" class="home-risk-label"></strong>
+        </div>
+        <ul id="home-risk-reasons" class="reasons"></ul>
+        <button id="btn-go-dashboard" class="btn small" type="button" data-i18n="home.goDashboard"></button>
+      </article>
+
       <article class="card">
         <h2 data-i18n="home.weatherTitle"></h2>
         <div id="weather"></div>
       </article>
 
-      <article id="home-risk" class="card risk-mini" hidden>
-        <div class="risk-mini-body">
-          <span id="home-risk-dot" class="dot"></span>
-          <strong id="home-risk-label"></strong>
-        </div>
-        <button id="btn-go-dashboard" class="btn" type="button" data-i18n="home.goDashboard"></button>
+      <article id="home-shelters" class="card" hidden>
+        <h2 data-i18n="dashboard.sheltersTitle"></h2>
+        <p id="home-shelters-note" class="muted small"></p>
+        <ol id="home-shelter-list" class="shelters"></ol>
       </article>
+
+      <article id="home-reports" class="card" hidden>
+        <h2 data-i18n="home.reportsTitle"></h2>
+        <p id="home-reports-text"></p>
+        <p class="muted small" data-i18n="home.reportsNote"></p>
+        <button id="btn-go-map" class="btn small" type="button" data-i18n="dashboard.showOnMap"></button>
+      </article>
+
+      <article id="home-guides" class="card" hidden>
+        <h2 data-i18n="actions.current"></h2>
+        <div id="home-guide-body"></div>
+        <button id="btn-go-actions" class="btn small" type="button" data-i18n="home.moreGuides"></button>
+      </article>
+
+
+
+
     </section>
 
     <!-- 화면 2: 대시보드 — 위험도 신호등 + 맞춤 대피소 -->

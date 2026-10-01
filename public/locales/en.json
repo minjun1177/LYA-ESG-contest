@@ -31,7 +31,12 @@
     "manualLocation": "Location picked on the map",
     "gpsLocation": "GPS location (accuracy about {accuracy})",
     "weatherTitle": "Current weather",
-    "goDashboard": "Check my risk level"
+    "goDashboard": "Risk details",
+    "moreGuides": "More safety guides",
+    "reportsTitle": "Citizen reports nearby",
+    "reportsNone": "No citizen reports within {radius}.",
+    "reportsSummary": "Citizen reports within {radius}: {confirmed} confirmed · {pending} awaiting confirmation",
+    "reportsNote": "Citizen reports are shown for reference only and do not affect the risk level (official sources only)."
   },
   "weather": {
     "temperature": "Temperature",
@@ -53,8 +58,6 @@
     "sheltersFiltered": "Shelters unsuitable for {hazard} are hidden",
     "noShelters": "No shelters registered within 20 km. Add shelter data.",
     "showOnMap": "Show on map",
-    "nearbyReports_one": "{count} citizen report within {radius}",
-    "nearbyReports_other": "{count} citizen reports within {radius}",
     "simulateLabel": "Disaster simulation (demo)",
     "simulateOff": "Off (real data)",
     "needLocation": "Set your location on the Home tab first."
@@ -73,12 +76,14 @@
     "reason": {
       "warning": "{hazard} {level} in effect",
       "warningPartial": "{hazard} {level} in effect (parts of the province: {detail})",
-      "earthquake": "Magnitude {magnitude} earthquake {distance} away",
-      "reports": "{count} citizen hazard report(s) within {radius}",
-      "heavyRainNow": "Heavy rain right now: {mm} mm per hour",
-      "hot": "Temperature {c}°C — heat wave level",
-      "cold": "Temperature {c}°C — cold wave level",
-      "none": "No risk factors"
+      "earthquake": "Magnitude {magnitude} earthquake — intensity {intensity} in my province",
+      "veryHeavyRain": "Very heavy rain right now: {mm} mm per hour",
+      "none": "No risk factors on official criteria"
+    },
+    "basis": {
+      "kma_warning": "Basis: KMA weather warnings (warning → danger, advisory → caution)",
+      "quake_alert": "Basis: earthquake emergency-alert criteria (intensity Ⅲ+ emergency alert → danger, intensity Ⅱ safety notice → caution)",
+      "kma_rain_term": "Basis: KMA forecast term \"very heavy rain\" (30 mm per hour or more)"
     }
   },
   "level": {
@@ -104,7 +109,10 @@
     "capacity": "Holds {count}",
     "underground": "Underground",
     "sample": "Sample",
-    "distance": "{distance}"
+    "distance": "{distance}",
+    "source": "Source: {source}",
+    "sourceDate": "Source: {source} · as of {date}",
+    "sampleSource": "Sample (fictional) data — not a real shelter"
   },
   "hazard": {
     "heavy_rain": {
@@ -219,11 +227,12 @@
     "legendTitle": "Legend",
     "legendToggle": "Show or hide legend",
     "legendQuake": "Earthquake (size = magnitude)",
-    "legendReport": "Citizen hazard report",
+    "legendReportPending": "Citizen report (awaiting confirmation)",
+    "legendReportConfirmed": "Citizen report (confirmed)",
     "legendShelter": "Shelter",
     "legendHint": "Tap a coloured province or its label to see the active alerts.",
     "partial": "(partial)",
-    "reportButton": "Report a hazard",
+    "reportButton": "Citizen report",
     "pickReportHint": "Tap the map where the hazard is",
     "pickLocationHint": "Tap the map at your location",
     "cancel": "Cancel",
@@ -254,8 +263,18 @@
     "success": "Your report is now visible to other users.",
     "resolve": "It's resolved",
     "resolveVotes": "Resolved votes {votes}/{threshold}",
-    "resolveDone": "Thanks for confirming.",
-    "expiresNote": "Reports disappear automatically after {hours} hours.",
+    "resolveDone": "Thanks for reporting it resolved.",
+    "confirm": "I saw it too",
+    "confirmVotes": "Confirmations {votes}/{threshold} · {minutes} min left",
+    "confirmDone": "Thanks for confirming.",
+    "promoted": "Enough confirmations — this is now a confirmed report.",
+    "statusPending": "Awaiting confirmation",
+    "statusConfirmed": "Confirmed",
+    "mine": "This is your report. Waiting for other people to confirm it.",
+    "needGps": "Reporting and confirming need \"Use current location\" (GPS) turned on.",
+    "gpsInaccurate": "GPS accuracy is low (about {accuracy}). It must be within {max} to report or confirm.",
+    "tooFar": "You can only report or confirm spots within {radius} of your GPS location.",
+    "expiresNote": "A report starts as \"awaiting confirmation\". If {threshold} other devices tap \"I saw it too\" within {minutes} minutes it becomes confirmed; otherwise it disappears. Reporting and confirming only work within {radius} of your GPS location.",
     "newToast": "New hazard report: {category}"
   },
   "quake": {
@@ -294,6 +313,13 @@
     "invalid_category": "Choose a report type.",
     "description_too_long": "The description must be {max} characters or fewer.",
     "description_required": "An \"Other\" report needs a description of the hazard.",
+    "device_required": "Could not identify this device. Please reload the page.",
+    "gps_required": "GPS location is required. Turn on \"Use current location\".",
+    "gps_inaccurate": "GPS accuracy is too low. Try again within {maxAccuracyM} m accuracy.",
+    "too_far": "You can only report or confirm spots within {radiusM} m of your GPS location.",
+    "own_report": "You cannot confirm your own report.",
+    "vote_not_allowed": "This vote is not available for the report in its current state.",
+    "invalid_vote": "Invalid vote.",
     "rate_limited": "Too many reports. Try again in {retryAfterSec} seconds.",
     "not_found": "Not found.",
     "invalid_bbox": "The map area is invalid.",

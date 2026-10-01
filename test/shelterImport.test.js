@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { convertShelterRows, findColumn } from '../src/lib/shelterImport.js';
+import { convertShelterRows, dateFromFilename, findColumn, normalizeDate } from '../src/lib/shelterImport.js';
 import { downloadDataGoFile, DataGoFileError } from '../src/services/dataGoFile.js';
 
 test('findColumn prefers exact names, then partial matches', () => {
@@ -14,12 +14,23 @@ test('converts real-world headers (Seoul Jung-gu cooling centers)', () => {
     쉼터명: '중구청', 소재지주소: '서울특별시 중구 창경궁로 17', 시설유형: '공공', 이용가능인원수: '50명',
     위도: '37.5638', 경도: '126.9976',
   }];
-  const { shelters, columns } = convertShelterRows(rows, { type: 'heat' });
+  const { shelters, columns } = convertShelterRows(rows, { type: 'heat', source: '서울특별시 중구_무더위쉼터 현황', fallbackDate: '2025-09-09' });
   assert.equal(columns.address, '소재지주소');
   assert.deepEqual(shelters[0], {
     name: '중구청', type: 'heat', lat: 37.5638, lng: 126.9976, address: '서울특별시 중구 창경궁로 17',
-    capacity: '50', underground: 0, sample: 0,
+    capacity: '50', underground: 0, sample: 0, source: '서울특별시 중구_무더위쉼터 현황', date: '2025-09-09',
   });
+});
+
+test('the reference date comes from the row, else from the fallback', () => {
+  const rows = [{ 쉼터명: 'A', 위도: '37.5', 경도: '127', '데이터 기준일자': '2026.06.08' }];
+  assert.equal(convertShelterRows(rows, { type: 'heat', fallbackDate: '2020-01-01' }).shelters[0].date, '2026-06-08');
+  const noDate = [{ 쉼터명: 'A', 위도: '37.5', 경도: '127' }];
+  assert.equal(convertShelterRows(noDate, { type: 'heat' }).shelters[0].date, '');
+  assert.equal(normalizeDate('20260827'), '2026-08-27');
+  assert.equal(normalizeDate('n/a'), '');
+  assert.equal(dateFromFilename('서울특별시 금천구_무더위쉼터현황_20260608.csv'), '2026-06-08');
+  assert.equal(dateFromFilename('광진구 한파쉼터 정보 (1).csv'), '');
 });
 
 test('fixes swapped latitude/longitude columns (Daejeon Seo-gu data)', () => {
@@ -49,8 +60,10 @@ function fakeFetch(routes) {
 
 test('downloadDataGoFile follows the dataset page to the CSV file', async () => {
   const csv = Buffer.from('쉼터명,위도,경도\nA,37.5,127\n');
+  const page = '<a onclick="x(\'atchFileId=FILE_000000001&amp;fileDetailSn=2\')">'
+    + '<li class="half"><strong class="key">수정일</strong>\n  <div class="value">2025-09-09</div></li>';
   const fetchImpl = fakeFetch([
-    [/\/data\/123\/fileData\.do$/, async () => ({ ok: true, status: 200, text: async () => '<a onclick="x(\'atchFileId=FILE_000000001&amp;fileDetailSn=2\')">' })],
+    [/\/data\/123\/fileData\.do$/, async () => ({ ok: true, status: 200, text: async () => page })],
     [/fileDownload\.do\?atchFileId=FILE_000000001&fileDetailSn=2/, async () => ({
       ok: true, status: 200,
       headers: new Headers({ 'content-disposition': `attachment; filename="${Buffer.from('쉼터.csv').toString('latin1')}"` }),
@@ -59,6 +72,7 @@ test('downloadDataGoFile follows the dataset page to the CSV file', async () => 
   ]);
   const file = await downloadDataGoFile('123', fetchImpl);
   assert.equal(file.filename, '쉼터.csv');
+  assert.equal(file.updatedAt, '2025-09-09');
   assert.equal(file.buffer.toString(), csv.toString());
 });
 

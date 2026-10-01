@@ -36,9 +36,15 @@ export function loadConfig(env = process.env) {
     trustTunnelHeader: toBool(env.TRUST_TUNNEL_HEADER, true),
     dbPath: resolvePath(env.DB_PATH, path.join(ROOT_DIR, 'data', 'reports.db')),
     sheltersDir: resolvePath(env.SHELTERS_DIR, path.join(ROOT_DIR, 'data', 'shelters')),
-    reportTtlHours: toInt(env.REPORT_TTL_HOURS, 24),
+    // 시민 제보 검증: 확인 대기 시간, 승격·해결에 필요한 서로 다른 기기 수, GPS 조건
+    reportPendingMinutes: toInt(env.REPORT_PENDING_MINUTES, 120),
+    reportConfirmThreshold: toInt(env.REPORT_CONFIRM_THRESHOLD, 3),
     reportResolveThreshold: toInt(env.REPORT_RESOLVE_THRESHOLD, 3),
+    reportRadiusM: toInt(env.REPORT_RADIUS_M, 1000),
+    reportGpsMaxAccuracyM: toInt(env.REPORT_GPS_MAX_ACCURACY_M, 500),
     reportRateLimit: toInt(env.REPORT_RATE_LIMIT, 5),
+    // 같은 IP의 제보+투표 상한 — 기기 ID를 매번 새로 만들어 기기 단위 제한을 피하는 것을 막는 안전장치
+    reportIpRateLimit: toInt(env.REPORT_IP_RATE_LIMIT, 100),
     reportRateWindowMin: toInt(env.REPORT_RATE_WINDOW_MIN, 10),
     cacheMinutes: toInt(env.API_CACHE_MINUTES, 5),
     // 장소 검색(Nominatim). 공개 서버 이용 정책상 앱 식별 User-Agent 필수, 연락처 이메일 권장

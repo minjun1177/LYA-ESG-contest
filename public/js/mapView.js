@@ -6,7 +6,7 @@ import { t, formatAgo, formatDistance, formatTime } from './i18n.js';
 const KOREA_CENTER = [36.35, 127.8];
 const KOREA_ZOOM = 7;
 const SHELTER_MIN_ZOOM = 11; // 이 배율 이상에서만 화면 범위 대피소를 불러옴
-const COLORS = { warning: '#dc2626', advisory: '#f59e0b', warningPin: '#dc2626', none: '#94a3b8', shelter: '#16a34a', recommended: '#2563eb', quake: '#7c3aed' };
+const COLORS = { warning: '#dc2626', advisory: '#f59e0b', reportConfirmed: '#dc2626', reportPending: '#eab308', none: '#94a3b8', shelter: '#16a34a', recommended: '#2563eb', quake: '#7c3aed' };
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -19,7 +19,7 @@ function hazardLabel(w) {
   return `${t(`hazard.${w.hazard}.name`)} ${t(`level.${w.level}`)}`;
 }
 
-export function createMapView({ api, onPick, onResolveReport, onSetLocation, getConfig }) {
+export function createMapView({ api, onPick, onVoteReport, isOwnReport, onSetLocation, getConfig }) {
   const map = L.map('map', { zoomControl: true }).setView(KOREA_CENTER, KOREA_ZOOM);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -103,7 +103,8 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
       legendRow({ background: COLORS.advisory }, 'map.legendAdvisory'),
       legendRow({ background: COLORS.none }, 'map.legendNone'),
       legendRow({ background: COLORS.quake, borderRadius: '50%', opacity: '0.7' }, 'map.legendQuake'),
-      legendRow({ background: COLORS.warningPin, borderRadius: '50% 50% 50% 0' }, 'map.legendReport'),
+      legendRow({ background: COLORS.reportPending, borderRadius: '50% 50% 50% 0' }, 'map.legendReportPending'),
+      legendRow({ background: COLORS.reportConfirmed, borderRadius: '50% 50% 50% 0' }, 'map.legendReportConfirmed'),
       legendRow({ background: COLORS.shelter, borderRadius: '50%' }, 'map.legendShelter'),
       legendRow({ background: COLORS.recommended, borderRadius: '50%' }, 'map.recommended'),
     );
@@ -213,6 +214,12 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
       const d = L.latLng(state.user.lat, state.user.lng).distanceTo([s.lat, s.lng]);
       box.append(el('p', null, formatDistance(d)));
     }
+    // 이 대피소를 지정·공개한 기관의 데이터와 그 기준일
+    let source = t('shelter.sampleSource');
+    if (!s.sample && s.source) {
+      source = s.date ? t('shelter.sourceDate', { source: s.source, date: s.date }) : t('shelter.source', { source: s.source });
+    }
+    box.append(el('p', 'muted small', source));
     return box;
   }
 
@@ -270,31 +277,51 @@ export function createMapView({ api, onPick, onResolveReport, onSetLocation, get
   }
 
   // ---------- 시민 제보 ----------
+  // 확인 대기(노란색): '나도 봤어요' 투표, 확인됨(빨간색): '해결됐어요' 투표
   function reportPopup(r) {
     const cfg = getConfig();
+    const pending = r.status === 'pending';
     const box = el('div', 'popup');
-    box.append(el('h4', null, t(`report.category.${r.category}`)));
+    const title = el('h4', null, t(`report.category.${r.category}`));
+    title.append(el('span', `badge ${pending ? 'pending' : 'confirmed'}`, t(pending ? 'report.statusPending' : 'report.statusConfirmed')));
+    box.append(title);
     if (r.description) box.append(el('p', 'report-desc', r.description));
     box.append(el('p', 'muted small', formatAgo(r.createdAt)));
-    box.append(el('p', 'muted small', t('report.resolveVotes', { votes: r.resolveVotes, threshold: cfg.reportResolveThreshold })));
-    const btn = el('button', 'btn small', t('report.resolve'));
+    const minutesLeft = Math.max(0, Math.ceil((new Date(r.expiresAt).getTime() - Date.now()) / 60000));
+    box.append(el('p', 'muted small', pending
+      ? t('report.confirmVotes', { votes: r.confirmVotes, threshold: cfg.reportConfirmThreshold, minutes: minutesLeft })
+      : t('report.resolveVotes', { votes: r.resolveVotes, threshold: cfg.reportResolveThreshold })));
+    if (pending && isOwnReport(r.id)) {
+      box.append(el('p', 'muted small', t('report.mine')));
+      return box;
+    }
+    const btn = el('button', 'btn small', t(pending ? 'report.confirm' : 'report.resolve'));
     btn.type = 'button';
-    btn.addEventListener('click', () => onResolveReport(r.id));
+    btn.addEventListener('click', () => onVoteReport(r, pending ? 'confirm' : 'resolve'));
     box.append(btn);
     return box;
   }
 
-  function reportIcon() {
-    return L.divIcon({ className: '', html: '<div class="report-marker"><span>!</span></div>', iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -26] });
+  function reportIcon(status) {
+    const pending = status === 'pending';
+    return L.divIcon({
+      className: '',
+      html: `<div class="report-marker ${pending ? 'pending' : 'confirmed'}"><span>${pending ? '?' : '!'}</span></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -26],
+    });
   }
 
   function upsertReport(r) {
     const existing = state.reports.get(r.id);
     if (existing) {
+      if (existing.data.status !== r.status) existing.marker.setIcon(reportIcon(r.status));
       existing.data = r;
+      if (existing.marker.isPopupOpen()) existing.marker.setPopupContent(reportPopup(r));
       return;
     }
-    const marker = L.marker([r.lat, r.lng], { icon: reportIcon() });
+    const marker = L.marker([r.lat, r.lng], { icon: reportIcon(r.status) });
     const entry = { data: r, marker };
     marker.bindPopup(() => reportPopup(entry.data), { minWidth: 200, maxWidth: 280 });
     state.reports.set(r.id, entry);

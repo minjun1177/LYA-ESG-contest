@@ -5,9 +5,12 @@ import { distanceMeters, isInKorea } from './geo.js';
 import { HAZARDS, SHELTER_TYPES } from './hazards.js';
 
 // data/shelters/*.csv 표준 형식 (scripts/import-shelters.js 가 공공데이터 CSV를 이 형식으로 변환)
-export const SHELTER_CSV_HEADER = ['name', 'type', 'lat', 'lng', 'address', 'capacity', 'underground', 'sample'];
+// source = 데이터를 지정·제공한 기관의 데이터셋 이름, date = 데이터 기준일 (YYYY-MM-DD, 모르면 빈칸)
+export const SHELTER_CSV_HEADER = ['name', 'type', 'lat', 'lng', 'address', 'capacity', 'underground', 'sample', 'source', 'date'];
 
 const truthy = (v) => ['1', 'y', 'yes', 'true'].includes(String(v).trim().toLowerCase());
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function normalizeShelter(row, index, source) {
   const lat = Number.parseFloat(row.lat);
@@ -24,6 +27,8 @@ export function normalizeShelter(row, index, source) {
     capacity: Number.isFinite(capacity) ? capacity : null,
     underground: truthy(row.underground),
     sample: truthy(row.sample),
+    source: row.source || '',
+    date: ISO_DATE.test(row.date ?? '') ? row.date : '',
   };
 }
 
@@ -76,7 +81,9 @@ export function matchShelters(shelters, origin, hazardCodes = [], { limit = 5, m
     if (found.length > 0) return { shelters: found, fallback: false };
   }
   // 발효 중인 재난이 없거나 맞는 대피소가 없으면 종류 무관 가장 가까운 곳 (맞는 게 없었다면 fallback 표시)
-  const any = nearest(shelters, origin, SHELTER_TYPES, policies.some((p) => p.excludeUnderground), limit, maxDistanceM);
+  // 재난 중 대체할 때는 민방위 대피시설(전시용 지하시설)은 넣지 않는다
+  const fallbackTypes = policies.length > 0 ? SHELTER_TYPES.filter((t) => t !== 'civil_defense') : SHELTER_TYPES;
+  const any = nearest(shelters, origin, fallbackTypes, policies.some((p) => p.excludeUnderground), limit, maxDistanceM);
   return { shelters: any, fallback: policies.length > 0 && any.length > 0 };
 }
 
